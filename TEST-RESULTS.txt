@@ -1,0 +1,26 @@
+Fakarny v1.1.0 verification summary
+===================================
+
+Unit tests
+----------
+Command: npm test
+Result: 19 passed, 0 failed
+- 9 original v1 carry-over tests (copied unchanged)
+- 7 multi-list / carry-over / scheduling / migration tests
+- 3 bilingual parity / localized number / localized time tests
+
+Static checks
+-------------
+- TypeScript syntax transpile: 18 .ts/.tsx files, 0 diagnostics
+- Strict TypeScript check: domain, migration, templates, and i18n modules passed
+- Expo config load: passed; version 1.1.0, package com.andrewmetry.fakarny, versionCode 2
+
+Not run
+-------
+- npm install / full app typecheck
+- Expo prebuild / Android Gradle compilation
+- Physical-device voice recognition, notifications, and AdMob testing
+
+Reason: npm registry access timed out in the artifact-generation environment and the
+uploaded v1.0.0 archive did not contain node_modules. No APK/AAB build or device test
+is claimed. See README.md for build instructions and compatibility notes.

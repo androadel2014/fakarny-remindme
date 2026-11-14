@@ -1,9 +1,8 @@
 node_modules/
 .expo/
 dist/
+web-build/
 android/
 ios/
-*.keystore
-*.jks
-.env*
-coverage/
+*.log
+.DS_Store

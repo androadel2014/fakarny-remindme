@@ -1,14 +1,17 @@
 import { Linking, Platform } from 'react-native';
+import * as IntentLauncher from 'expo-intent-launcher';
 import * as Notifications from 'expo-notifications';
-import { remainingNames, type Language, type ShoppingState } from '../domain/shopping';
-import { t } from '../i18n/strings';
+import { buildReminderSchedulePlan, type AppState, type Language, type ShoppingList, type Weekday } from '../domain/shopping';
+import { formatNumber, t } from '../i18n/strings';
 
-export const REMINDER_CHANNEL = 'fakarny-shopping-v1';
-const REMINDER_OWNER = 'fakarny-weekly-v1';
+export const REMINDER_CHANNEL = 'fakarny-store-reminders-v2';
+function reminderChannelId(language: Language): string { return `${REMINDER_CHANNEL}-${language}`; }
+const REMINDER_OWNER = 'fakarny-store-reminder-v2';
+const LEGACY_REMINDER_OWNER = 'fakarny-weekly-v1';
 
-// Foreground delivery + chime + heads-up while the app is open.
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
+    shouldShowAlert: true,
     shouldShowBanner: true,
     shouldShowList: true,
     shouldPlaySound: true,
@@ -16,41 +19,46 @@ Notifications.setNotificationHandler({
   }),
 });
 
-let scheduleQueue: Promise<void> = Promise.resolve();
+export interface AlarmSnapshot {
+  listId: string;
+  listName: string;
+  items: string[];
+}
 
-export function buildNotificationContent(state: ShoppingState): Notifications.NotificationContentInput {
-  const lang: Language = state.preferences.language;
-  const names = remainingNames(state.items);
-  // The body contains the ENTIRE list; do not truncate it here. Android may
-  // shorten its lockscreen preview; the complete snapshot is in data.items.
-  const body = names.length > 0
-    ? `${t(lang, 'alarmBody')}\n${names.map((name, i) => `${i + 1}. ${name}`).join('\n')}`
-    : t(lang, 'alarmEmpty');
+export function buildNotificationContent(list: ShoppingList, language: Language): Notifications.NotificationContentInput {
+  const outstanding = list.items.filter(item => !item.checked).map(item => item.name);
+  const body = outstanding.length > 0
+    ? `${t(language, 'alarmBody')}\n${outstanding.map((name, index) => `${formatNumber(index + 1, language)}. ${name}`).join('\n')}`
+    : t(language, 'alarmEmpty');
   return {
-    title: t(lang, 'alarmTitle'),
+    title: `${t(language, 'alarmTitlePrefix')} ${list.name}`,
     body,
     sound: 'reminder.wav',
     priority: Notifications.AndroidNotificationPriority.MAX,
-    interruptionLevel: 'timeSensitive',
-    data: { owner: REMINDER_OWNER, items: names },
-    ...(Platform.OS === 'android' ? { color: '#255F49' } : {}),
+    data: { owner: REMINDER_OWNER, listId: list.id, listName: list.name, items: outstanding },
+    ...(Platform.OS === 'android' ? { color: '#245D48' } : {}),
   };
 }
 
 export function isOurReminder(content: Notifications.NotificationContent): boolean {
-  return content.data?.owner === REMINDER_OWNER;
+  return content.data?.owner === REMINDER_OWNER || content.data?.owner === LEGACY_REMINDER_OWNER;
 }
 
-export function snapshotFromReminder(content: Notifications.NotificationContent): string[] {
-  const items = content.data?.items;
-  return Array.isArray(items) ? items.filter((v): v is string => typeof v === 'string') : [];
+export function snapshotFromReminder(content: Notifications.NotificationContent): AlarmSnapshot {
+  const data = content.data ?? {};
+  const items = data.items;
+  return {
+    listId: typeof data.listId === 'string' ? data.listId : 'migrated-v1-home-list',
+    listName: typeof data.listName === 'string' ? data.listName : '',
+    items: Array.isArray(items) ? items.filter((value): value is string => typeof value === 'string') : [],
+  };
 }
 
-export async function ensureReminderChannel(): Promise<void> {
+export async function ensureReminderChannel(language: Language): Promise<void> {
   if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync(REMINDER_CHANNEL, {
-    name: 'Weekly shopping reminder',
-    description: 'Weekly shopping list reminders with a short chime',
+  await Notifications.setNotificationChannelAsync(reminderChannelId(language), {
+    name: t(language, 'notificationChannelName'),
+    description: t(language, 'notificationChannelDescription'),
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 300, 150, 300],
     enableVibrate: true,
@@ -60,19 +68,17 @@ export async function ensureReminderChannel(): Promise<void> {
   });
 }
 
-export async function getReminderPermissions(): Promise<{ notifications: boolean; exact: boolean }> {
-  const n = await Notifications.getPermissionsAsync();
-  const notifications = n.granted || n.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
-  if (Platform.OS !== 'android') return { notifications, exact: true };
-  const e = await Notifications.getExactAlarmPermissionsAsync();
-  return { notifications, exact: e.granted };
+export async function getReminderPermissions(): Promise<{ notifications: boolean }> {
+  const notificationStatus = await Notifications.getPermissionsAsync();
+  const notifications = notificationStatus.granted
+    || notificationStatus.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
+  return { notifications };
 }
 
-export async function askNotificationPermission(): Promise<boolean> {
-  await ensureReminderChannel();
+export async function askNotificationPermission(language: Language): Promise<boolean> {
+  await ensureReminderChannel(language);
   const current = await Notifications.getPermissionsAsync();
   if (!current.granted && !current.canAskAgain) {
-    // Android/iOS cannot re-show a permission dialog after a hard denial.
     await Linking.openSettings();
     return false;
   }
@@ -80,40 +86,55 @@ export async function askNotificationPermission(): Promise<boolean> {
   return result.granted || result.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
 }
 
-export async function askExactAlarmPermission(): Promise<boolean> {
-  if (Platform.OS !== 'android') return true;
-  const result = await Notifications.requestExactAlarmPermissionsAsync();
-  return result.granted;
+export async function askExactAlarmPermission(): Promise<void> {
+  if (Platform.OS !== 'android' || Number(Platform.Version) < 31) return;
+  // SDK 54's expo-notifications supports SCHEDULE_EXACT_ALARM in the manifest,
+  // but its JS API predates get/requestExactAlarmPermissionsAsync. Open the
+  // Android special-access page directly instead of calling SDK 58-only APIs.
+  try {
+    await IntentLauncher.startActivityAsync('android.settings.REQUEST_SCHEDULE_EXACT_ALARM', {
+      data: 'package:com.andrewmetry.fakarny',
+    });
+  } catch {
+    await Linking.openSettings();
+  }
 }
 
-async function replaceScheduledReminder(state: ShoppingState): Promise<void> {
-  await ensureReminderChannel();
-  // Find our notifications, even across a cold launch. Never touch other apps.
+let scheduleQueue: Promise<void> = Promise.resolve();
+
+async function replaceScheduledReminders(state: AppState): Promise<void> {
+  await ensureReminderChannel(state.preferences.language);
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   for (const notification of scheduled) {
     if (isOurReminder(notification.content)) {
       await Notifications.cancelScheduledNotificationAsync(notification.identifier);
     }
   }
+
   const permissions = await getReminderPermissions();
   if (!permissions.notifications) return;
-  await Notifications.scheduleNotificationAsync({
-    content: buildNotificationContent(state),
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-      weekday: state.preferences.weekday,
-      hour: state.preferences.hour,
-      minute: state.preferences.minute,
-      channelId: REMINDER_CHANNEL,
-      // Exact-alarm special access is opt-in; best-effort remains functional.
-      delivery: permissions.exact ? 'alarmClock' : 'bestEffort',
-    },
-  });
+
+  const byId = new Map(state.lists.map(list => [list.id, list]));
+  const plan = buildReminderSchedulePlan(state.lists);
+  for (const entry of plan) {
+    const list = byId.get(entry.listId);
+    if (!list) continue;
+    await Notifications.scheduleNotificationAsync({
+      content: buildNotificationContent(list, state.preferences.language),
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+        weekday: entry.weekday as Weekday,
+        hour: entry.hour,
+        minute: entry.minute,
+        channelId: reminderChannelId(state.preferences.language),
+      },
+    });
+  }
 }
 
-/** Serialized so rapid edits never leave an old reminder or duplicate alarm. */
-export function synchronizeReminder(state: ShoppingState): Promise<void> {
-  const job = scheduleQueue.catch(() => undefined).then(() => replaceScheduledReminder(state));
+/** Serialized rescheduling prevents rapid edits from leaving duplicate alarms. */
+export function synchronizeReminders(state: AppState): Promise<void> {
+  const job = scheduleQueue.catch(() => undefined).then(() => replaceScheduledReminders(state));
   scheduleQueue = job;
   return job;
 }

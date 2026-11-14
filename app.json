@@ -3,7 +3,7 @@
     "name": "فكّرني — Remind Me",
     "slug": "fakarny-remind-me",
     "scheme": "fakarny",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -12,12 +12,17 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.andrewmetry.fakarny",
-      "infoPlist": { "CFBundleDisplayName": "فكّرني" }
+      "infoPlist": {
+        "CFBundleDisplayName": "فكّرني — Remind Me"
+      }
     },
     "android": {
       "package": "com.andrewmetry.fakarny",
-      "versionCode": 1,
-      "permissions": ["android.permission.POST_NOTIFICATIONS", "android.permission.SCHEDULE_EXACT_ALARM"],
+      "versionCode": 2,
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-foreground.png",
         "backgroundColor": "#F4E9D3"
@@ -26,18 +31,34 @@
       "softwareKeyboardLayoutMode": "resize"
     },
     "plugins": [
-      ["expo-notifications", {
-        "icon": "./assets/notification-icon.png",
-        "color": "#255F49",
-        "sounds": ["./assets/reminder.wav"],
-        "enableRemoteNotifications": false
-      }],
-      ["expo-speech-recognition", {
-        "microphonePermission": "Allow Fakarny to hear the shopping item you speak.",
-        "speechRecognitionPermission": "Allow Fakarny to turn spoken shopping items into text.",
-        "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
-      }]
-    ],
-    "experiments": { "tsconfigPaths": true }
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#245D48",
+          "sounds": [
+            "./assets/reminder.wav"
+          ],
+          "enableRemoteNotifications": false
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow Remind Me to use the microphone only when you tap the voice button. / اسمح لفكّرني باستخدام الميكروفون فقط عند الضغط على زر الإدخال الصوتي.",
+          "speechRecognitionPermission": "Allow Remind Me to turn spoken shopping items into text. / اسمح لفكّرني بتحويل كلامك إلى نص لإضافة عناصر التسوق.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
+      ]
+    ]
   }
 }

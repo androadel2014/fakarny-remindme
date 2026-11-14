@@ -10,10 +10,7 @@ export const C = {
 
 export const S = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.page },
-  card: {
-    backgroundColor: C.paper, borderRadius: 22, borderWidth: 1,
-    borderColor: C.border, padding: 18,
-  },
+  card: { backgroundColor: C.paper, borderRadius: 22, borderWidth: 1, borderColor: C.border, padding: 18 },
   shadow: Platform.select({
     ios: { shadowColor: '#24462F', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 5 } },
     default: { elevation: 2 },
@@ -22,17 +19,16 @@ export const S = StyleSheet.create({
   subhead: { color: C.forestDeep, fontSize: 20, fontWeight: '800' },
   body: { color: C.text, fontSize: 16 },
   muted: { color: C.muted, fontSize: 14, lineHeight: 21 },
-  button: {
-    backgroundColor: C.forest, borderRadius: 18, minHeight: 56,
-    justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20,
-  },
-  buttonText: { color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
-  pill: { borderRadius: 16, paddingVertical: 12, paddingHorizontal: 14, minHeight: 47 },
+  button: { backgroundColor: C.forest, borderRadius: 18, minHeight: 54, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  pill: { borderRadius: 16, paddingVertical: 11, paddingHorizontal: 14, minHeight: 44 },
+  input: { borderColor: C.border, borderWidth: 1.5, borderRadius: 16, backgroundColor: C.page, color: C.forestDeep, minHeight: 58, paddingHorizontal: 16, fontSize: 17, fontWeight: '600' },
 });
 
 export function dirStyle(lang: Language): { textAlign: 'right' | 'left'; writingDirection: 'rtl' | 'ltr' } {
   return { textAlign: lang === 'ar' ? 'right' : 'left', writingDirection: lang === 'ar' ? 'rtl' : 'ltr' };
 }
+
 export function rowDirection(lang: Language): 'row-reverse' | 'row' {
   return lang === 'ar' ? 'row-reverse' : 'row';
 }
