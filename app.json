@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "فكّرني — Remind Me",
+    "slug": "fakarny-remind-me",
+    "scheme": "fakarny",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FCFAF4",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.andrewmetry.fakarny",
+      "infoPlist": { "CFBundleDisplayName": "فكّرني" }
+    },
+    "android": {
+      "package": "com.andrewmetry.fakarny",
+      "versionCode": 1,
+      "permissions": ["android.permission.POST_NOTIFICATIONS", "android.permission.SCHEDULE_EXACT_ALARM"],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-foreground.png",
+        "backgroundColor": "#F4E9D3"
+      },
+      "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "plugins": [
+      ["expo-notifications", {
+        "icon": "./assets/notification-icon.png",
+        "color": "#255F49",
+        "sounds": ["./assets/reminder.wav"],
+        "enableRemoteNotifications": false
+      }],
+      ["expo-speech-recognition", {
+        "microphonePermission": "Allow Fakarny to hear the shopping item you speak.",
+        "speechRecognitionPermission": "Allow Fakarny to turn spoken shopping items into text.",
+        "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+      }]
+    ],
+    "experiments": { "tsconfigPaths": true }
+  }
+}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <title>Fakarny — grocery basket with checkmark</title>
+  <rect width="1024" height="1024" rx="222" fill="#245D48"/>
+  <circle cx="512" cy="516" r="371" fill="#2F7558"/>
+  <path d="M314 466 419 276c24-45 74-39 94-1l100 192" stroke="#F4CD92" stroke-width="45" stroke-linecap="round" fill="none"/>
+  <path d="M240 462h543l-56 323c-7 37-32 59-71 59H371c-39 0-64-22-71-59z" fill="#FAE7C6"/>
+  <rect x="218" y="438" width="588" height="74" rx="37" fill="#F4B67C"/>
+  <path d="m402 656 78 75 160-177" fill="none" stroke="#245D48" stroke-width="49" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M363 553v212M650 553v212" stroke="#E9BD86" stroke-width="25" stroke-linecap="round" opacity=".60"/>
+</svg>
