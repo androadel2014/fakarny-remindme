@@ -3,7 +3,7 @@
     "name": "فكّرني — Remind Me",
     "slug": "fakarny-remind-me",
     "scheme": "fakarny",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.andrewmetry.fakarny",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.SCHEDULE_EXACT_ALARM"
@@ -40,16 +40,6 @@
             "./assets/reminder.wav"
           ],
           "enableRemoteNotifications": false
-        }
-      ],
-      [
-        "expo-speech-recognition",
-        {
-          "microphonePermission": "Allow Remind Me to use the microphone only when you tap the voice button. / اسمح لفكّرني باستخدام الميكروفون فقط عند الضغط على زر الإدخال الصوتي.",
-          "speechRecognitionPermission": "Allow Remind Me to turn spoken shopping items into text. / اسمح لفكّرني بتحويل كلامك إلى نص لإضافة عناصر التسوق.",
-          "androidSpeechServicePackages": [
-            "com.google.android.googlequicksearchbox"
-          ]
         }
       ]
     ]
