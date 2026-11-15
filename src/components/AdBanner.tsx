@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Platform, View } from 'react-native';
 import Constants from 'expo-constants';
-import { ADMOB_CONFIG, getBannerAdUnitId } from '../services/ads';
+import { getBannerAdUnitId } from '../services/ads';
 
 let NativeAds: any = null;
 if (Constants.appOwnership !== 'expo') {
@@ -10,7 +10,6 @@ if (Constants.appOwnership !== 'expo') {
 
 export default function AdBanner() {
   const [failed, setFailed] = useState(false);
-  if (!ADMOB_CONFIG.enabled) return null;
   if (!NativeAds?.BannerAd || !NativeAds?.BannerAdSize || failed) return null;
   const Banner = NativeAds.BannerAd;
   return (
