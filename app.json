@@ -3,7 +3,7 @@
     "name": "فكّرني — Remind Me",
     "slug": "fakarny-remind-me",
     "scheme": "fakarny",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.andrewmetry.fakarny",
-      "versionCode": 7,
+      "versionCode": 8,
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.SCHEDULE_EXACT_ALARM"
@@ -48,8 +48,7 @@
           "androidAppId": "ca-app-pub-3940256099942544~3347511713",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511"
         }
-      ],
-      "./plugins/withoutAdsInitProvider.js"
+      ]
     ]
   }
 }
