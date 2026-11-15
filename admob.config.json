@@ -2,7 +2,7 @@
   "active": "test",
   "sets": {
     "test": {
-      "enabled": true,
+      "enabled": false,
       "appIds": {
         "android": "ca-app-pub-3940256099942544~3347511713",
         "ios": "ca-app-pub-3940256099942544~1458002511"
