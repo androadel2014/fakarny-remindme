@@ -35,7 +35,7 @@ type Screen = 'home' | 'list' | 'listEditor' | 'itemEditor' | 'settings';
 type PermissionState = { notifications: boolean };
 
 function MainApp() {
-  const [data, setData] = useState<ShoppingAppState>(() => ({ schemaVersion: 2, lists: [], preferences: { language: 'ar' }, hasSeenIntro: false }));
+  const [data, setData] = useState<ShoppingAppState>(() => ({ schemaVersion: 3, lists: [], preferences: { language: 'ar' }, hasSeenIntro: false }));
   const dataRef = useRef<ShoppingAppState>(data);
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -196,7 +196,10 @@ function MainApp() {
 
   function createFromTemplate(kind: TemplateKind) {
     const template = getTemplate(kind, language);
-    const created = createShoppingList(template.name, template.items, DEFAULT_LIST_SCHEDULE, new Date());
+    const templateSchedule: ListSchedule = kind === 'monthly'
+      ? { ...DEFAULT_LIST_SCHEDULE, cadence: 'monthly', weekdays: [], dayOfMonth: 1 }
+      : DEFAULT_LIST_SCHEDULE;
+    const created = createShoppingList(template.name, template.items, templateSchedule, new Date());
     commit({ ...dataRef.current, lists: [...dataRef.current.lists, created] });
     setSelectedListId(created.id);
     setScreen('list');

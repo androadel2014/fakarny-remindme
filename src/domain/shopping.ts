@@ -2,6 +2,7 @@
 export type Language = 'ar' | 'en';
 export type RecognitionLanguage = 'ar-EG' | 'en-US';
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7; // Expo: 1=Sunday
+export type ScheduleCadence = 'weekly' | 'monthly';
 
 export interface ShoppingItem {
   id: string;
@@ -13,7 +14,11 @@ export interface ShoppingItem {
 
 export interface ListSchedule {
   enabled: boolean;
+  /** Schedules saved before v1.2 omit cadence and are always weekly. */
+  cadence?: ScheduleCadence;
   weekdays: Weekday[];
+  /** Used only when cadence is monthly; always between 1 and 28. */
+  dayOfMonth?: number;
   hour: number;
   minute: number;
 }
@@ -23,7 +28,7 @@ export interface ShoppingList {
   name: string; // The store/place this list belongs to.
   items: ShoppingItem[];
   schedule: ListSchedule;
-  /** Last completed weekly cycle boundary, in local YYYY-MM-DD form. */
+  /** Last completed weekly or monthly cycle boundary, in local YYYY-MM-DD form. */
   lastHandledShoppingDate: string;
 }
 
@@ -32,22 +37,26 @@ export interface AppPreferences {
 }
 
 export interface AppState {
-  schemaVersion: 2;
+  schemaVersion: 3;
   lists: ShoppingList[];
   preferences: AppPreferences;
   hasSeenIntro: boolean;
 }
 
-export interface ReminderScheduleEntry {
+interface ReminderEntryBase {
   listId: string;
   listName: string;
-  weekday: Weekday;
   hour: number;
   minute: number;
 }
+export type ReminderScheduleEntry = ReminderEntryBase & (
+  | { cadence: 'weekly'; weekday: Weekday }
+  | { cadence: 'monthly'; dayOfMonth: number }
+);
 
 export const DEFAULT_LIST_SCHEDULE: ListSchedule = {
   enabled: true,
+  cadence: 'weekly',
   weekdays: [1],
   hour: 10,
   minute: 0,
@@ -76,9 +85,47 @@ export function latestClosedCycleDate(now: Date, weekdays: readonly Weekday[]): 
   return localDayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysBack));
 }
 
+/** A monthly cycle ends at midnight AFTER the selected day (local time). */
+export function latestClosedMonthlyCycleDate(now: Date, dayOfMonth: number): string {
+  if (!isValidMonthlyDay(dayOfMonth)) throw new RangeError('Monthly day must be 1–28');
+  const monthOffset = now.getDate() > dayOfMonth ? 0 : -1;
+  return localDayKey(new Date(now.getFullYear(), now.getMonth() + monthOffset, dayOfMonth));
+}
+
+export function isValidMonthlyDay(day: number): boolean {
+  return Number.isInteger(day) && day >= 1 && day <= 28;
+}
+
+/** Normalize new and pre-v1.2 schedules without altering weekly cycle math. */
+export function normalizeListSchedule(schedule: ListSchedule): ListSchedule {
+  if (schedule.cadence === 'monthly') {
+    return {
+      enabled: schedule.enabled,
+      cadence: 'monthly',
+      weekdays: [],
+      dayOfMonth: isValidMonthlyDay(schedule.dayOfMonth ?? 0) ? schedule.dayOfMonth : 1,
+      hour: schedule.hour,
+      minute: schedule.minute,
+    };
+  }
+  return {
+    enabled: schedule.enabled,
+    cadence: 'weekly',
+    weekdays: validWeekdays(schedule.weekdays),
+    hour: schedule.hour,
+    minute: schedule.minute,
+  };
+}
+
+export function latestClosedListCycleDate(now: Date, schedule: ListSchedule): string {
+  return schedule.cadence === 'monthly'
+    ? latestClosedMonthlyCycleDate(now, schedule.dayOfMonth ?? 1)
+    : latestClosedCycleDate(now, schedule.weekdays);
+}
+
 export function createInitialAppState(): AppState {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     lists: [],
     preferences: { language: 'ar' },
     hasSeenIntro: false,
@@ -92,18 +139,13 @@ export function createShoppingList(
   now = new Date(),
   id = `list-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
 ): ShoppingList {
-  const cleanSchedule: ListSchedule = {
-    enabled: schedule.enabled,
-    weekdays: validWeekdays(schedule.weekdays),
-    hour: schedule.hour,
-    minute: schedule.minute,
-  };
+  const cleanSchedule = normalizeListSchedule(schedule);
   return {
     id,
     name: name.trim(),
     items: items.map(item => ({ ...item })),
     schedule: cleanSchedule,
-    lastHandledShoppingDate: latestClosedCycleDate(now, cleanSchedule.weekdays),
+    lastHandledShoppingDate: latestClosedListCycleDate(now, cleanSchedule),
   };
 }
 
@@ -113,10 +155,10 @@ export function carryOverUnchecked(items: readonly ShoppingItem[]): ShoppingItem
 }
 
 export function applyAutomaticCarryOverToList(list: ShoppingList, now = new Date()): ShoppingList {
-  // Reminder on/off controls notifications only; weekly list rollover continues
-  // on the selected cycle days even while alerts are muted.
-  if (list.schedule.weekdays.length === 0) return list;
-  const closedDate = latestClosedCycleDate(now, list.schedule.weekdays);
+  // Reminder on/off controls notifications only; list rollover continues
+  // on the selected cycle boundary even while alerts are muted.
+  if (list.schedule.cadence !== 'monthly' && list.schedule.weekdays.length === 0) return list;
+  const closedDate = latestClosedListCycleDate(now, list.schedule);
   if (closedDate <= list.lastHandledShoppingDate) return list;
   return {
     ...list,
@@ -142,7 +184,9 @@ export function finishShoppingList(state: AppState, listId: string, now = new Da
   const list = state.lists[index];
   if (!list) return state;
   const days = validWeekdays(list.schedule.weekdays);
-  const todayIsCycleEnd = days.length > 0 && now.getDay() + 1 === days[days.length - 1];
+  const todayIsCycleEnd = list.schedule.cadence === 'monthly'
+    ? now.getDate() === list.schedule.dayOfMonth
+    : days.length > 0 && now.getDay() + 1 === days[days.length - 1];
   const todayKey = localDayKey(now);
   const finished: ShoppingList = {
     ...list,
@@ -157,26 +201,35 @@ export function finishShoppingList(state: AppState, listId: string, now = new Da
 }
 
 export function updateListSchedule(list: ShoppingList, schedule: ListSchedule, now = new Date()): ShoppingList {
-  const clean: ListSchedule = {
-    enabled: schedule.enabled,
-    weekdays: validWeekdays(schedule.weekdays),
-    hour: schedule.hour,
-    minute: schedule.minute,
-  };
-  // Only changing the cycle weekdays changes the rollover boundary. Turning
-  // alerts off or changing their clock time must not skip a pending cycle.
-  const scheduleChanged = list.schedule.weekdays.join(',') !== clean.weekdays.join(',');
+  const clean = normalizeListSchedule(schedule);
+  // Only changing cadence or its cycle day(s) changes the rollover anchor.
+  // Turning off alerts or changing their clock time must not skip a cycle.
+  const scheduleChanged = (list.schedule.cadence ?? 'weekly') !== clean.cadence
+    || (clean.cadence === 'monthly'
+      ? list.schedule.dayOfMonth !== clean.dayOfMonth
+      : list.schedule.weekdays.join(',') !== clean.weekdays.join(','));
   return {
     ...list,
     schedule: clean,
     lastHandledShoppingDate: scheduleChanged
-      ? latestClosedCycleDate(now, clean.weekdays)
+      ? latestClosedListCycleDate(now, clean)
       : list.lastHandledShoppingDate,
   };
 }
 
+export function nextMonthlyReminderAt(dayOfMonth: number, hour: number, minute: number, now: Date): Date {
+  if (!isValidMonthlyDay(dayOfMonth)) throw new RangeError('Monthly day must be 1–28');
+  const next = new Date(now.getFullYear(), now.getMonth(), dayOfMonth, hour, minute, 0, 0);
+  if (next.getTime() <= now.getTime()) next.setMonth(next.getMonth() + 1);
+  return next;
+}
+
 export function nextReminderAt(schedule: ListSchedule, now: Date): Date | null {
-  if (!schedule.enabled || schedule.weekdays.length === 0) return null;
+  if (!schedule.enabled) return null;
+  if (schedule.cadence === 'monthly') {
+    return nextMonthlyReminderAt(schedule.dayOfMonth ?? 1, schedule.hour, schedule.minute, now);
+  }
+  if (schedule.weekdays.length === 0) return null;
   const candidates = schedule.weekdays.map(day => {
     const daysAhead = (day - 1 - now.getDay() + 7) % 7;
     const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysAhead, schedule.hour, schedule.minute, 0, 0);
@@ -190,14 +243,27 @@ export function buildReminderSchedulePlan(lists: readonly ShoppingList[]): Remin
   const plan: ReminderScheduleEntry[] = [];
   for (const list of lists) {
     if (!list.schedule.enabled) continue;
-    for (const weekday of validWeekdays(list.schedule.weekdays)) {
+    if (list.schedule.cadence === 'monthly') {
+      if (!isValidMonthlyDay(list.schedule.dayOfMonth ?? 0)) continue;
       plan.push({
         listId: list.id,
         listName: list.name,
-        weekday,
+        cadence: 'monthly',
+        dayOfMonth: list.schedule.dayOfMonth!,
         hour: list.schedule.hour,
         minute: list.schedule.minute,
       });
+    } else {
+      for (const weekday of validWeekdays(list.schedule.weekdays)) {
+        plan.push({
+          listId: list.id,
+          listName: list.name,
+          cadence: 'weekly',
+          weekday,
+          hour: list.schedule.hour,
+          minute: list.schedule.minute,
+        });
+      }
     }
   }
   return plan;

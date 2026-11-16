@@ -1,159 +1,51 @@
-# فكّرني — Remind Me · Android v1.1.0
+# فكّرني — Fakarny · v1.2.0
 
-**Package:** `com.andrewmetry.fakarny`  
-**versionName:** `1.1.0`  
-**versionCode:** `2`  
-**Runtime:** Expo SDK 54 · React Native 0.81.5 · React 19.1.0 · TypeScript  
-**Storage:** AsyncStorage on-device only · no backend · no accounts
+Complete Expo / React Native / TypeScript source based on the provided **live v1.1.9 source ZIP**.
 
-## Source baseline note
+- **Android application ID:** `com.andrewmetry.fakarny` (unchanged)
+- **App version:** `1.2.0`, Android `versionCode: 12` in `app.json`
+- **App stack:** Retained from v1.1.9 (`expo ~58.0.25`, React Native `0.88.0`, React `19.3.0` as declared in `package.json`)
+- **Storage:** AsyncStorage only; no account or backend for shopping lists
+- **Ads:** All AdMob files, setup, plugin registration, and ProGuard keep rules remain unchanged from v1.1.9
 
-The supplied v1.0.0 ZIP did not match the SDK stated in the request: its `package.json` declared Expo `~58.0.25`, React Native `0.88.0`, and React `19.3.0`. This v1.1.0 source is normalized to the requested Expo SDK 54 stack (React Native 0.81.5 / React 19.1.0). The app package/bundle identifier remains unchanged.
+## New in v1.2.0
 
-## What changed in v1.1.0
+A list now has a frequency, chosen separately for each list:
 
-- **Multiple store-based lists.** Each list has a store/place name, its own items, its own reminder days, time, and on/off switch.
-- **Independent alarms.** Each enabled list schedules one local weekly notification per selected weekday. Notifications include that list's store name and its outstanding item snapshot. Lists do not share a global schedule.
-- **Multiple weekdays.** A list can remind on one or more weekdays at one selected clock time. Each list can use a different set of days and a different time.
-- **Per-list weekly carry-over.** Checked items are cleared at trip completion. Unchecked items remain for the next cycle. If multiple weekdays are selected, that list's cycle closes after its final selected weekday. Muting the reminder turns off its notifications, not its weekly item cycle.
-- **v1 data migration.** The old single list becomes the first list named `Home store` / `متجر البيت`. All valid items (including checked state and IDs), the old weekday/time alarm, language preference, and rollover date are retained. The old v1 storage key is left in place as a safety copy; v2 is written to a new key.
-- **Production voice input.** Uses the native `expo-speech-recognition` SDK-54 build. Arabic (`ar-EG`) and English (`en-US`) recognition are selectable. Before the OS microphone permission request, the app explains when the microphone is used and how speech is handled.
-- **Share.** Share a list as plain text through the Android system share sheet; WhatsApp appears as a target when installed.
-- **Progress.** Every list card and list detail shows checked progress (`3 of 8` / `٣ من ٨`).
-- **Ready templates.** One-tap starter lists for weekly shopping, travel, and household supplies, with Arabic and English starter items.
-- **AdMob.** A home-screen banner is anchored below the scrollable lists content. A preloaded interstitial may appear only after the user confirms finishing a list with at least one checked item, and no more than once per app session. There are no app-open ads and no ads during item/list editing. Ad load or display errors are ignored so local app features continue to work.
-- **First-run introduction.** Explains store-based lists and independent reminders.
-- **Arabic/English text review.** Translation keys are kept in parity and tested. Arabic progress/time values use Arabic-Indic digits.
+- **Weekly (أسبوعي):** The existing weekday selection, time, and automatic weekly carry-over behavior are preserved.
+- **Monthly (شهري):** Choose one day from 1 through 28 and the usual reminder hour/minute. The reminder repeats every month on the selected day, and the month's cycle closes at the **next local midnight**. Checked items are dropped; unchecked items carry over in place, maintaining their IDs and order.
+- **Monthly template:** `مشتريات الشهر` / `Monthly shopping`: rice, oil, sugar, tea, coffee, pasta, detergent, tissues in both languages.
+- **Bilingual UI:** The editor shows Weekly/Monthly frequency controls and, for monthly lists, a 1–28 picker in place of weekday chips. Home cards and list detail display frequency and time.
 
-## Build and run
+Reminder muting does **not** disable list cycle rollover for either frequency. The existing reminder service schedules monthly lists with the `MONTHLY` trigger provided by `expo-notifications`; weekly lists continue to use the original `WEEKLY` trigger. Each list owns its own notifications.
 
-Requirements: Node.js 20.19.4+ for Expo SDK 54, npm, Android Studio/Android SDK, and JDK 17. The included `npm test` script uses Node's built-in TypeScript stripping and therefore requires Node.js 22.16+.
+## Stored state and safe migration
+
+- New state schema: **3**, saved to `@fakarny/shopping-state/v3`.
+- On first launch, if no v3 state exists, the app reads the published v2 key `@fakarny/shopping-state/v2`, defaults each old list to **weekly**, keeps its items, checked flags, time, weekdays, handled-date boundary, language, and intro state, then writes v3.
+- The original v1 single-list migration continues to work if a v2 key does not exist. It is upgraded into v3 after the legacy conversion.
+- **Old storage keys are not removed or overwritten.** A corrupt stored state is not replaced with empty data.
+- When a user changes a list's cadence or cycle date, its handled boundary is reset to the latest *already closed* cycle date; edits to time or notification on/off do not alter that boundary.
+
+## Build / tests
+
+From the extracted project root:
 
 ```bash
-npm install
+npm ci
 npm test
 npm run typecheck
 npx expo prebuild --platform android
 npx expo run:android
 ```
 
-For a locally installable debug APK:
+`npm test` requires a Node version supporting `--experimental-strip-types` (the tests were run with Node 22.16.0). Use a Node version supported by the resolved dependencies for native builds.
 
-```bash
-npx expo prebuild --platform android
-cd android
-./gradlew assembleDebug              # Windows: gradlew.bat assembleDebug
-# android/app/build/outputs/apk/debug/app-debug.apk
-```
+The existing `.github/workflows/build-aab.yml`, `eas.json`, `.github/scripts/inject-signing.py`, app package identifiers, Firebase file, and app/plugin configuration are **unchanged**. Release signing remains controlled by the original CI secrets and workflow. The ZIP includes managed project source and assets; it does not include the generated native `android/` directory, signing secrets, or an APK/AAB.
 
-For EAS builds:
+## Verification carried out for this delivery
 
-```bash
-npm install -g eas-cli
-eas login
-eas build --platform android --profile preview       # APK
-eas build --platform android --profile production    # AAB
-```
-
-This ZIP contains the complete Expo-managed project source and configuration. Native `android/` and `ios/` folders are generated by `expo prebuild`; no precompiled APK/AAB is included.
-
-## Voice input notes
-
-- Voice recognition is a native module and does **not** run in Expo Go. Use an Android development build, preview APK, or release build created from this source.
-- The config plugin declares microphone/speech permissions and package visibility for Google's Android speech recognition service.
-- The user chooses Arabic (`ar-EG`) or English (`en-US`) before speaking.
-- The app does not store voice recordings. The device's installed speech service may require an internet connection depending on that service's settings.
-- If microphone access is denied or no speech service is available, typing remains available and the app shows a translated explanation rather than failing.
-
-## Reminder behavior and limits
-
-- Android notification permission is requested after the first-run introduction. Users can also change it in Settings.
-- Android 12+ may require the user to allow the app under **Alarms & reminders**. After the first-run introduction, the app requests notification permission and opens Android's `REQUEST_SCHEDULE_EXACT_ALARM` settings action. The same shortcut is available in Settings. `SCHEDULE_EXACT_ALARM` is declared in the manifest. This source intentionally uses the SDK 54 weekly-trigger API; the `delivery` option and Expo's JS exact-alarm permission helpers were added in later Expo Notifications versions and are not used here.
-- Each list/day is a separate weekly notification request. Changing a list, its items, or its schedule synchronizes all app-owned reminders. Old v1 reminders are recognized and replaced; notifications belonging to other apps are never canceled.
-- If Android exact-alarm access is denied, the OS may reject or delay the exact schedule; grant the special access and reopen the app to resynchronize.
-- The notification is a local snapshot. The app refreshes it when list data changes and when the app returns to the foreground.
-- Automatic carry-over is reconciled on app launch, foreground, and while the app remains active. Android may suspend a terminated app, so JavaScript cannot guarantee that list data is rewritten at the exact midnight boundary while the app is fully stopped. The next foreground/open reconciles it idempotently.
-- Android may shorten the lock-screen preview of a long list, but the full item snapshot is included in the notification content/data and is displayed in the in-app reminder view when opened.
-
-## AdMob configuration
-
-`admob.config.json` is the single ad configuration source used by both the runtime and the Expo config plugin.
-
-- The active set is currently `"test"` and contains Google's official Android/iOS test App IDs, banner unit IDs, and interstitial unit IDs.
-- Before production, replace the placeholder values in the `production` object with your own AdMob App IDs and ad unit IDs. Then change only the top-level `active` value from `"test"` to `"production"`.
-- The Google Mobile Ads native module requires a development/standalone build; it does not run in Expo Go.
-- Banner placement is in the home screen's reserved footer area, not over the list content or primary actions. A failed banner simply disappears.
-- The interstitial is requested only after the explicit **Finish shopping** confirmation and only if at least one item was checked. It is session-limited and is skipped if it has not loaded.
-- The SDK's UMP consent helper is called before initialization when exposed by the installed package; ad requests are non-personalized. Consent/SDK failures are contained and never block list storage, reminders, sharing, or voice typing.
-
-## Data model and files
-
-| Concern | File |
-|---|---|
-| v2 list model, per-list cycle arithmetic, independent schedule plan | `src/domain/shopping.ts` |
-| v1-to-v2 migration | `src/domain/migration.ts` |
-| v2 storage key and safe migration write | `src/services/storage.ts` |
-| Per-list notification content, permissions, weekly scheduling | `src/services/reminders.ts` |
-| AdMob test/production IDs | `admob.config.json` |
-| AdMob initialization, banner/interstitial behavior | `src/services/ads.ts`, `src/components/AdBanner.tsx` |
-| Store-based home and starter templates | `src/screens/Home.tsx`, `src/domain/templates.ts` |
-| Store name, weekday selection, time, reminder on/off | `src/screens/ListEditor.tsx` |
-| Item entry, Arabic/English speech, microphone explanation | `src/screens/ItemEditor.tsx` |
-| Progress, item actions, share and finish flow | `src/screens/ListDetail.tsx`, `App.tsx` |
-| Arabic and English strings, localized progress/time | `src/i18n/strings.ts` |
-
-## Text corrections (v1.0.0 → v1.1.0)
-
-The full translation dictionary was reviewed for the new multi-list flow. The following are the principal wording/spelling corrections and replacements; the Arabic and English dictionaries contain matching keys.
-
-| Language | Before | After |
-|---|---|---|
-| Arabic | `اسم الحاجة لازم يكون أقل من ١٦١ حرف.` | `اسم العنصر لازم يكون ١٦٠ حرفًا أو أقل.` |
-| Arabic | `كل اللي ناقص البيت… في مكان واحد` | `قائمة مستقلة وتذكير خاص لكل متجر` |
-| Arabic | `قائمة البيت` | `قوائم التسوق` |
-| Arabic | `قائمة الأسبوع` | `قوائم التسوق` |
-| Arabic | `يوم الشراء كل أسبوع` | `أيام التذكير الأسبوعية` |
-| Arabic | `ميعاد التذكير والقائمة اتحدّثوا.` | `تم حفظ اسم المتجر وموعد التذكير.` |
-| Arabic | `اضغط «خلصت شراء» عشان نبدأ قائمة جديدة.` | `لما تخلص مشوار الشراء، اضغط «خلصت التسوق» عشان نجهّز الدورة الجاية.` |
-| Arabic | `اللي لسه ناقص هيفضل للأسبوع الجاي.` | `العناصر اللي لسه مطلوبة هتفضل للدورة الجاية.` |
-| Arabic | `قولها بصوتك` | `أضف بالصوت` |
-| Arabic | `بدون حسابات أو إعلانات • بياناتك على جهازك فقط` | `قوائمك محفوظة على جهازك فقط، ومفيش حساب مطلوب.` |
-| Arabic | `التسجيل الصوتي محتاج نسخة التطبيق المثبّتة (APK أو Development Build). الكتابة شغالة هنا.` | `الإدخال الصوتي محتاج نسخة مثبّتة من التطبيق، مش Expo Go. تقدر تضيف العناصر بالكتابة دلوقتي.` |
-| English | `Everything your home needs, in one place` | `A separate list and reminder for every store` |
-| English | `Home essentials` | `Shopping lists` |
-| English | `This week’s list` | `Shopping lists` |
-| English | `Your weekly shopping day` | `Weekly reminder days` |
-| English | `Purchased items will clear. Anything unchecked stays for next week.` | `Checked items will be cleared. Anything still unchecked will stay for the next cycle.` |
-| English | `No accounts or ads • Stored on your device only` | `Your lists are stored on this device. No account is required.` |
-| English | `Speak an item` | `Add by voice` |
-| English | `Your shopping schedule and reminder have been updated.` | `The store name and reminder schedule have been saved.` |
-| English | `Speech recognition requires an installed APK or development build. You can still type in Expo Go.` | `Voice input requires an installed app build, not Expo Go. You can still type items.` |
-
-Additional new UI copy was authored in both languages for store names, multiple reminder days, reminder on/off, the microphone explanation, templates, sharing, and the first-run introduction. `tests/i18n.test.mjs` checks that every translation key exists in both dictionaries and verifies the localized progress and time formats.
-
-## Tests and verification
-
-Run:
-
-```bash
-npm test
-```
-
-**Test result in the artifact-generation environment (Node v22.16.0): 19 passed, 0 failed.**
-
-- 9 retained v1 carry-over compatibility tests.
-- 7 new multi-list tests: independent list rollover, multi-weekday cycle boundary, finishing one list without changing another, multiple independent alarm entries, v1 migration preservation, reminder-off cycle behavior, and cycle anchor.
-- 3 bilingual tests: Arabic/English key parity, `3 of 8` / `٣ من ٨`, and Arabic time digits.
-
-**Additional static checks:** TypeScript syntax transpile passed for all 18 `.ts`/`.tsx` source files (0 diagnostics). Strict TypeScript checking passed for the pure domain, migration, template, and i18n modules.
-
-**Not verified in this environment:** `npm install`, full-app `npm run typecheck`, Expo prebuild, Android compilation, and on-device voice/notification/AdMob behavior. The package registry request timed out and the source archive did not include `node_modules`; therefore no native build or device test is claimed. Run the build commands above on a machine with npm registry access and Android tooling before publishing.
-
-## References
-
-- Expo SDK 54 release notes: https://expo.dev/changelog/sdk-54
-- Expo SDK / React Native version mapping: https://docs.expo.dev/versions/54.0.0/
-- SDK 54 local notifications and exact-alarm manifest requirement: https://docs.expo.dev/versions/54.0.0/sdk/notifications/
-- SDK 54 Android intent launcher: https://docs.expo.dev/versions/54.0.0/sdk/intent-launcher/
-- Speech recognition package (SDK-specific install tags and config plugin): https://github.com/jamsch/expo-speech-recognition
-- Google Mobile Ads React Native library and Expo config plugin: https://github.com/invertase/react-native-google-mobile-ads
+- **`npm test`: 30 passed, 0 failed** (19 original tests + 11 new monthly tests).
+- Standalone strict TypeScript check for `src/domain/*` and `src/i18n/strings.ts`: **passed**.
+- Full `npm run typecheck` / native Android build: **not completed** because the npm package registry was inaccessible (DNS `EAI_AGAIN`), leaving required Expo/React Native dependencies unavailable in this environment. No claim of a device build or AdMob runtime verification is made.
+- Protected AdMob, Android keep-rules, Firebase, signing, and package identifier files were checked for changes against the input ZIP; see delivery summary.

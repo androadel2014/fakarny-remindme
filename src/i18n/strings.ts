@@ -1,4 +1,4 @@
-import type { Language, Weekday } from '../domain/shopping';
+import type { Language, ListSchedule, Weekday } from '../domain/shopping';
 
 const AR = {
   appName: 'فكّرني',
@@ -13,6 +13,7 @@ const AR = {
   templatesTitle: 'ابدأ بقائمة جاهزة',
   templatesBody: 'اختار نموذجًا واضغط عليه لإضافة قائمة بعناصر مقترحة.',
   templateWeekly: 'مشتريات الأسبوع',
+  templateMonthly: 'مشتريات الشهر',
   templateTravel: 'مستلزمات السفر',
   templateHousehold: 'مستلزمات المنزل',
   useTemplate: 'استخدم النموذج',
@@ -54,6 +55,12 @@ const AR = {
   reminderOn: 'تشغيل التذكير',
   reminderOff: 'إيقاف التذكير',
   reminderDays: 'أيام التذكير الأسبوعية',
+  reminderCadence: 'تكرار القائمة',
+  cadenceWeekly: 'أسبوعي',
+  cadenceMonthly: 'شهري',
+  monthlyDay: 'يوم الشهر',
+  monthlyDayLabel: 'يوم',
+  monthlyDayHint: 'اختار يومًا من ١ إلى ٢٨ عشان القائمة تتكرر كل شهر، حتى في فبراير.',
   reminderTime: 'وقت التذكير',
   chooseDaysHint: 'اختار يومًا واحدًا أو أكتر. لو التذكير شغّال، هيوصلك تنبيه في الأيام دي فقط.',
   chooseAtLeastOneDay: 'اختار يومًا واحدًا على الأقل أو أوقف التذكير.',
@@ -105,8 +112,8 @@ const AR = {
   exactButton: 'فتح إعدادات المنبّهات والتذكيرات',
   notificationCaption: 'كل تذكير بيعرض اسم المتجر والعناصر اللي لسه مطلوبة في قائمته.',
   privacyNote: 'قوائمك محفوظة على جهازك فقط، ومفيش حساب مطلوب.',
-  notificationChannelName: 'تذكيرات فكّرني الأسبوعية',
-  notificationChannelDescription: 'تنبيهات أسبوعية مستقلة لكل قائمة تسوق.',
+  notificationChannelName: 'تذكيرات فكّرني للتسوق',
+  notificationChannelDescription: 'تنبيهات أسبوعية أو شهرية مستقلة لكل قائمة تسوق.',
   alarmTitlePrefix: 'مشتريات من',
   alarmBody: 'دي العناصر اللي لسه محتاج تشتريها:',
   alarmEmpty: 'القائمة فاضية. افتح فكّرني لو عايز تضيف حاجة.',
@@ -118,7 +125,7 @@ const AR = {
   writeError: 'تعذّر حفظ التغيير على الجهاز. حاول مرة تانية.',
   retry: 'حاول تاني',
   introTitle: 'كل متجر في قائمة لوحده',
-  introBody: 'اعمل قائمة لكل مكان بتشتري منه. ضيف العناصر طول الأسبوع، وحدد أيام ووقت تذكير مستقل لكل قائمة. العناصر اللي ما اشتريتهاش هتفضل للدورة الجاية. على أندرويد، اسمح بالإشعارات والمنبّهات والتذكيرات علشان المواعيد توصل في وقتها.',
+  introBody: 'اعمل قائمة لكل مكان بتشتري منه. ضيف العناصر على مدار الأسبوع أو الشهر، وحدد موعد تذكير مستقل لكل قائمة. العناصر اللي ما اشتريتهاش هتفضل للدورة الجاية. على أندرويد، اسمح بالإشعارات والمنبّهات والتذكيرات علشان المواعيد توصل في وقتها.',
   introButton: 'ابدأ استخدام فكّرني',
   daySunday: 'الأحد',
   dayMonday: 'الإثنين',
@@ -131,6 +138,7 @@ const AR = {
   adsLabel: 'إعلان',
   genericError: 'حصلت مشكلة غير متوقعة. حاول تاني.',
   templateWeeklyItems: 'بيض، لبن، عيش، فاكهة، خضار، أرز، زيت',
+  templateMonthlyItems: 'أرز، زيت، سكر، شاي، قهوة، مكرونة، مسحوق غسيل، مناديل ورقية',
 } as const;
 
 const EN = {
@@ -146,6 +154,7 @@ const EN = {
   templatesTitle: 'Start with a ready-made list',
   templatesBody: 'Choose a template to create a list with suggested starter items.',
   templateWeekly: 'Weekly shopping',
+  templateMonthly: 'Monthly shopping',
   templateTravel: 'Travel essentials',
   templateHousehold: 'Household supplies',
   useTemplate: 'Use template',
@@ -187,6 +196,12 @@ const EN = {
   reminderOn: 'Turn reminder on',
   reminderOff: 'Turn reminder off',
   reminderDays: 'Weekly reminder days',
+  reminderCadence: 'List frequency',
+  cadenceWeekly: 'Weekly',
+  cadenceMonthly: 'Monthly',
+  monthlyDay: 'Day of month',
+  monthlyDayLabel: 'Day',
+  monthlyDayHint: 'Choose a day from 1 to 28 so this list repeats every month, including February.',
   reminderTime: 'Reminder time',
   chooseDaysHint: 'Choose one or more days. When reminders are on, you will be notified only on those days.',
   chooseAtLeastOneDay: 'Choose at least one day or turn the reminder off.',
@@ -238,8 +253,8 @@ const EN = {
   exactButton: 'Open Alarms & reminders settings',
   notificationCaption: 'Each reminder shows the store name and the items still needed from that list.',
   privacyNote: 'Your lists are stored on this device. No account is required.',
-  notificationChannelName: 'Remind Me weekly reminders',
-  notificationChannelDescription: 'Independent weekly alerts for each shopping list.',
+  notificationChannelName: 'Remind Me shopping reminders',
+  notificationChannelDescription: 'Independent weekly or monthly alerts for each shopping list.',
   alarmTitlePrefix: 'Shopping at',
   alarmBody: 'These are the items you still need:',
   alarmEmpty: 'This list is empty. Open Remind Me to add something.',
@@ -251,7 +266,7 @@ const EN = {
   writeError: 'Could not save this change on your device. Please try again.',
   retry: 'Try again',
   introTitle: 'One list for every store',
-  introBody: 'Create a list for each place you shop. Add items throughout the week, then set independent reminder days and a time for each list. Items you do not buy carry into the next cycle. On Android, allow notifications and Alarms & reminders so alerts can arrive on time.',
+  introBody: 'Create a list for each place you shop. Add items throughout the week or month, then choose a weekly or monthly reminder for each list. Items you do not buy carry into the next cycle. On Android, allow notifications and Alarms & reminders so alerts can arrive on time.',
   introButton: 'Get started',
   daySunday: 'Sunday',
   dayMonday: 'Monday',
@@ -264,6 +279,7 @@ const EN = {
   adsLabel: 'Ad',
   genericError: 'Something unexpected happened. Please try again.',
   templateWeeklyItems: 'eggs, milk, bread, fruit, vegetables, rice, cooking oil',
+  templateMonthlyItems: 'rice, cooking oil, sugar, tea, coffee, pasta, laundry detergent, tissues',
 } as const;
 
 export const STRINGS = { ar: AR, en: EN } as const;
@@ -300,4 +316,13 @@ export function formatTime(hour: number, minute: number, lang: Language): string
 
 export function formatWeekdays(lang: Language, weekdays: readonly Weekday[]): string {
   return weekdays.map(day => dayLabel(lang, day)).join(lang === 'ar' ? '، ' : ', ');
+}
+
+/** One localized cadence summary for home cards and list details. */
+export function formatListSchedule(lang: Language, schedule: ListSchedule): string {
+  const time = formatTime(schedule.hour, schedule.minute, lang);
+  if (schedule.cadence === 'monthly') {
+    return `${t(lang, 'cadenceMonthly')} · ${t(lang, 'monthlyDayLabel')} ${formatNumber(schedule.dayOfMonth ?? 1, lang)} · ${time}`;
+  }
+  return `${t(lang, 'cadenceWeekly')} · ${formatWeekdays(lang, schedule.weekdays)} · ${time}`;
 }

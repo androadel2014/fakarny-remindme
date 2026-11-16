@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import type { Language, ListSchedule, ShoppingList, Weekday } from '../domain/shopping';
+import { isValidMonthlyDay, type Language, type ListSchedule, type ScheduleCadence, type ShoppingList, type Weekday } from '../domain/shopping';
 import { dayLabel, formatNumber, formatTime, t } from '../i18n/strings';
 import { C, S, dirStyle, rowDirection } from '../components/theme';
 import { PageHeader, PrimaryButton, SecondaryButton, SectionLabel } from '../components/Ui';
@@ -12,8 +12,9 @@ interface Props {
   onSave: (name: string, schedule: ListSchedule) => void;
 }
 
-const DEFAULT_SCHEDULE: ListSchedule = { enabled: true, weekdays: [1], hour: 10, minute: 0 };
+const DEFAULT_SCHEDULE: ListSchedule = { enabled: true, cadence: 'weekly', weekdays: [1], hour: 10, minute: 0 };
 const WEEKDAYS: Weekday[] = [1, 2, 3, 4, 5, 6, 7];
+const MONTH_DAYS = Array.from({ length: 28 }, (_, index) => index + 1);
 
 function parseLocalizedInteger(value: string): number | null {
   const normalized = value
@@ -35,6 +36,14 @@ export default function ListEditor({ lang, list, onClose, onSave }: Props) {
     setDraftHour(formatNumber(schedule.hour, lang));
     setDraftMinute(formatNumber(schedule.minute, lang));
     setShowTimeModal(true);
+  };
+  const changeCadence = (cadence: ScheduleCadence) => {
+    setSchedule(previous => ({
+      ...previous,
+      cadence,
+      weekdays: cadence === 'weekly' && previous.weekdays.length === 0 ? [1] : previous.weekdays,
+      dayOfMonth: previous.dayOfMonth ?? 1,
+    }));
   };
   const toggleDay = (day: Weekday) => {
     setSchedule(previous => ({
@@ -60,7 +69,9 @@ export default function ListEditor({ lang, list, onClose, onSave }: Props) {
       Alert.alert(t(lang, 'listName'), t(lang, 'emptyListName'));
       return;
     }
-    if (schedule.enabled && schedule.weekdays.length === 0) {
+    if (schedule.cadence === 'monthly') {
+      if (!isValidMonthlyDay(schedule.dayOfMonth ?? 0)) return;
+    } else if (schedule.enabled && schedule.weekdays.length === 0) {
       Alert.alert(t(lang, 'reminderTitle'), t(lang, 'chooseAtLeastOneDay'));
       return;
     }
@@ -90,20 +101,59 @@ export default function ListEditor({ lang, list, onClose, onSave }: Props) {
           </View>
           {!schedule.enabled && <Text style={[S.muted, { marginBottom: 14 }, dirStyle(lang)]}>{t(lang, 'reminderDisabled')}</Text>}
           <>
-              <SectionLabel lang={lang}>{t(lang, 'reminderDays')}</SectionLabel>
-              <View style={{ flexDirection: rowDirection(lang), flexWrap: 'wrap', gap: 8 }}>
-                {WEEKDAYS.map(day => {
-                  const selected = schedule.weekdays.includes(day);
+              <SectionLabel lang={lang}>{t(lang, 'reminderCadence')}</SectionLabel>
+              <View style={{ flexDirection: rowDirection(lang), gap: 10, marginBottom: 20 }}>
+                {(['weekly', 'monthly'] as const).map(cadence => {
+                  const selected = (schedule.cadence ?? 'weekly') === cadence;
                   return (
-                    <Pressable key={day} onPress={() => toggleDay(day)} accessibilityRole="checkbox" accessibilityState={{ checked: selected }}
-                      accessibilityLabel={dayLabel(lang, day)}
-                      style={{ backgroundColor: selected ? C.forest : C.soft, borderRadius: 12, minHeight: 43, paddingHorizontal: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: selected ? C.forest : C.border }}>
-                      <Text style={{ color: selected ? '#FFFFFF' : C.text, fontWeight: '800', fontSize: 13 }}>{dayLabel(lang, day)}</Text>
+                    <Pressable key={cadence} onPress={() => changeCadence(cadence)} accessibilityRole="radio"
+                      accessibilityState={{ selected }} accessibilityLabel={t(lang, cadence === 'weekly' ? 'cadenceWeekly' : 'cadenceMonthly')}
+                      style={{ flex: 1, minHeight: 48, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: selected ? C.forest : C.soft, borderWidth: 1, borderColor: selected ? C.forest : C.border }}>
+                      <Text style={{ color: selected ? '#FFFFFF' : C.text, fontWeight: '900', fontSize: 15 }}>
+                        {t(lang, cadence === 'weekly' ? 'cadenceWeekly' : 'cadenceMonthly')}
+                      </Text>
                     </Pressable>
                   );
                 })}
               </View>
-              <Text style={[S.muted, { marginTop: 10, marginBottom: 18 }, dirStyle(lang)]}>{t(lang, 'chooseDaysHint')}</Text>
+              {schedule.cadence === 'monthly' ? (
+                <>
+                  <SectionLabel lang={lang}>{t(lang, 'monthlyDay')}</SectionLabel>
+                  <View style={{ flexDirection: rowDirection(lang), flexWrap: 'wrap', gap: 8 }}>
+                    {MONTH_DAYS.map(day => {
+                      const selected = (schedule.dayOfMonth ?? 1) === day;
+                      return (
+                        <Pressable key={day} onPress={() => setSchedule(previous => ({ ...previous, dayOfMonth: day }))}
+                          accessibilityRole="radio" accessibilityState={{ selected }}
+                          accessibilityLabel={`${t(lang, 'monthlyDayLabel')} ${formatNumber(day, lang)}`}
+                          style={{ width: 43, minHeight: 43, alignItems: 'center', justifyContent: 'center', borderRadius: 12,
+                            backgroundColor: selected ? C.forest : C.soft, borderWidth: 1, borderColor: selected ? C.forest : C.border }}>
+                          <Text style={{ color: selected ? '#FFFFFF' : C.text, fontWeight: '800', fontSize: 14 }}>{formatNumber(day, lang)}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <Text style={[S.muted, { marginTop: 10, marginBottom: 18 }, dirStyle(lang)]}>{t(lang, 'monthlyDayHint')}</Text>
+                </>
+              ) : (
+                <>
+                  <SectionLabel lang={lang}>{t(lang, 'reminderDays')}</SectionLabel>
+                  <View style={{ flexDirection: rowDirection(lang), flexWrap: 'wrap', gap: 8 }}>
+                    {WEEKDAYS.map(day => {
+                      const selected = schedule.weekdays.includes(day);
+                      return (
+                        <Pressable key={day} onPress={() => toggleDay(day)} accessibilityRole="checkbox" accessibilityState={{ checked: selected }}
+                          accessibilityLabel={dayLabel(lang, day)}
+                          style={{ backgroundColor: selected ? C.forest : C.soft, borderRadius: 12, minHeight: 43, paddingHorizontal: 12,
+                            justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: selected ? C.forest : C.border }}>
+                          <Text style={{ color: selected ? '#FFFFFF' : C.text, fontWeight: '800', fontSize: 13 }}>{dayLabel(lang, day)}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <Text style={[S.muted, { marginTop: 10, marginBottom: 18 }, dirStyle(lang)]}>{t(lang, 'chooseDaysHint')}</Text>
+                </>
+              )}
               <SectionLabel lang={lang}>{t(lang, 'reminderTime')}</SectionLabel>
               <Pressable accessibilityRole="button" onPress={openTimePicker} accessibilityLabel={t(lang, 'reminderTime')}
                 style={{ flexDirection: rowDirection(lang), justifyContent: 'space-between', alignItems: 'center', borderRadius: 15, backgroundColor: C.peach, minHeight: 62, paddingHorizontal: 17 }}>
@@ -112,7 +162,9 @@ export default function ListEditor({ lang, list, onClose, onSave }: Props) {
               </Pressable>
           </>
         </View>
-        <PrimaryButton label={t(lang, list ? 'saveList' : 'createList')} onPress={submit} disabled={!name.trim() || (schedule.enabled && schedule.weekdays.length === 0)} style={{ minHeight: 60 }} />
+        <PrimaryButton label={t(lang, list ? 'saveList' : 'createList')} onPress={submit} disabled={!name.trim() || (schedule.cadence === 'monthly'
+          ? !isValidMonthlyDay(schedule.dayOfMonth ?? 0)
+          : (schedule.enabled && schedule.weekdays.length === 0))} style={{ minHeight: 60 }} />
       </ScrollView>
 
       <Modal visible={showTimeModal} transparent animationType="fade" onRequestClose={() => setShowTimeModal(false)}>

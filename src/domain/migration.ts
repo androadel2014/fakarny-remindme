@@ -1,4 +1,4 @@
-import { latestClosedCycleDate, type AppState, type Language, type ShoppingItem, type ShoppingList, type Weekday } from './shopping.ts';
+import { latestClosedCycleDate, type Language, type ShoppingItem, type ShoppingList, type Weekday } from './shopping.ts';
 
 type RecordValue = Record<string, unknown>;
 function isRecord(value: unknown): value is RecordValue {
@@ -26,8 +26,16 @@ function parseLegacyItems(value: unknown): ShoppingItem[] {
   }).filter((item): item is ShoppingItem => item !== null);
 }
 
-/** Pure v1-to-v2 migration; the legacy source is left intact by storage.ts. */
-export function migrateLegacyState(value: unknown, now = new Date()): AppState {
+/** Legacy v2 shape is retained so existing v1 migration and tests are untouched. */
+export interface LegacyV2State {
+  schemaVersion: 2;
+  lists: ShoppingList[];
+  preferences: { language: Language };
+  hasSeenIntro: boolean;
+}
+
+/** Pure v1-to-v2 migration; storage then upgrades to v3 without deleting v1/v2. */
+export function migrateLegacyState(value: unknown, now = new Date()): LegacyV2State {
   if (!isRecord(value) || value.schemaVersion !== 1) throw new Error('INVALID_SAVED_DATA');
   const prefs = isRecord(value.preferences) ? value.preferences : {};
   const language: Language = prefs.language === 'en' ? 'en' : 'ar';

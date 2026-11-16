@@ -1,26 +1,22 @@
-Fakarny v1.1.0 verification summary
-===================================
+Fakarny v1.2.0 — verification in the supplied environment
+============================================================
+Node: 22.16.0
 
-Unit tests
-----------
-Command: npm test
-Result: 19 passed, 0 failed
-- 9 original v1 carry-over tests (copied unchanged)
-- 7 multi-list / carry-over / scheduling / migration tests
-- 3 bilingual parity / localized number / localized time tests
+npm test
+  30 tests passed, 0 failed, 0 skipped
+  19 original tests preserved, 11 monthly-specific tests added
 
-Static checks
--------------
-- TypeScript syntax transpile: 18 .ts/.tsx files, 0 diagnostics
-- Strict TypeScript check: domain, migration, templates, and i18n modules passed
-- Expo config load: passed; version 1.1.0, package com.andrewmetry.fakarny, versionCode 2
+Standalone strict TypeScript check (src/domain/*.ts and src/i18n/strings.ts)
+  PASSED (tsc 5.8.3, ESNext/Bundler, ES2022)
 
-Not run
--------
-- npm install / full app typecheck
-- Expo prebuild / Android Gradle compilation
-- Physical-device voice recognition, notifications, and AdMob testing
+npm ci
+  FAILED: registry.npmjs.org was inaccessible (DNS EAI_AGAIN).
+  npm reported 'Exit handler never called' after tarballs could not be fetched.
 
-Reason: npm registry access timed out in the artifact-generation environment and the
-uploaded v1.0.0 archive did not contain node_modules. No APK/AAB build or device test
-is claimed. See README.md for build instructions and compatibility notes.
+npm run typecheck
+  NOT COMPLETED: Expo and React Native type files unavailable due failed npm ci.
+
+Android native build, device runtime and AdMob display
+  NOT RUN; not verified in this environment.
+
+This report does not claim a compiled or device-tested APK/AAB.

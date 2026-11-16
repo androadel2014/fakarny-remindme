@@ -121,13 +121,21 @@ async function replaceScheduledReminders(state: AppState): Promise<void> {
     if (!list) continue;
     await Notifications.scheduleNotificationAsync({
       content: buildNotificationContent(list, state.preferences.language),
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-        weekday: entry.weekday as Weekday,
-        hour: entry.hour,
-        minute: entry.minute,
-        channelId: reminderChannelId(state.preferences.language),
-      },
+      trigger: entry.cadence === 'monthly'
+        ? {
+          type: Notifications.SchedulableTriggerInputTypes.MONTHLY,
+          day: entry.dayOfMonth,
+          hour: entry.hour,
+          minute: entry.minute,
+          channelId: reminderChannelId(state.preferences.language),
+        }
+        : {
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+          weekday: entry.weekday as Weekday,
+          hour: entry.hour,
+          minute: entry.minute,
+          channelId: reminderChannelId(state.preferences.language),
+        },
     });
   }
 }

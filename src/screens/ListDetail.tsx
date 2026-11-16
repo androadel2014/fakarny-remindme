@@ -1,7 +1,7 @@
 import React from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import type { Language, ShoppingList } from '../domain/shopping';
-import { formatTime, formatWeekdays, progressLabel, t } from '../i18n/strings';
+import { formatListSchedule, progressLabel, t } from '../i18n/strings';
 import { C, S, dirStyle, rowDirection } from '../components/theme';
 import { PageHeader, PrimaryButton, SecondaryButton, SectionLabel } from '../components/Ui';
 
@@ -67,7 +67,7 @@ export default function ListDetail({ list, lang, onBack, onEditList, onAddItem, 
           </View>
           <View style={{ marginTop: 15, flexDirection: rowDirection(lang), alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <Text style={[{ color: '#FFFFFF', fontWeight: '700', fontSize: 13, flex: 1 }, dirStyle(lang)]}>
-              {`${list.schedule.enabled ? '' : `${t(lang, 'reminderDisabled')} · `}${formatWeekdays(lang, list.schedule.weekdays)} · ${formatTime(list.schedule.hour, list.schedule.minute, lang)}`}
+              {`${list.schedule.enabled ? '' : `${t(lang, 'reminderDisabled')} · `}${formatListSchedule(lang, list.schedule)}`}
             </Text>
             <Text style={{ color: '#D7E8DC', fontSize: 12, fontWeight: '800' }}>{t(lang, list.schedule.enabled ? 'reminderEnabled' : 'reminderDisabled')}</Text>
           </View>
