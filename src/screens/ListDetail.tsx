@@ -2,7 +2,8 @@ import React from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import type { Language, ShoppingList } from '../domain/shopping';
 import { formatListSchedule, progressLabel, t } from '../i18n/strings';
-import { C, S, dirStyle, rowDirection } from '../components/theme';
+import { getListDisplayName } from '../domain/templates';
+import { C, S, dirStyle, rowDirection, textDirStyle } from '../components/theme';
 import { PageHeader, PrimaryButton, SecondaryButton, SectionLabel } from '../components/Ui';
 
 interface Props {
@@ -24,11 +25,11 @@ function ItemRow({ name, checked, lang, onToggle, onEdit, onDelete }:
   return (
     <View style={[S.card, { flexDirection: rowDirection(lang), alignItems: 'center', gap: 10, padding: 12, marginBottom: 9, borderRadius: 17 }]}>
       <Pressable onPress={onToggle} accessibilityRole="checkbox" accessibilityState={{ checked }} accessibilityLabel={`${t(lang, checked ? 'checked' : 'unchecked')}: ${name}`}
-        style={{ width: 28, height: 28, borderRadius: 9, borderWidth: 2, borderColor: checked ? C.forest : '#B8C3B6', backgroundColor: checked ? C.forest : C.paper, alignItems: 'center', justifyContent: 'center' }}>
+        style={{ width: 28, height: 28, borderRadius: 9, borderWidth: 2, borderColor: checked ? C.forest : C.checkBorder, backgroundColor: checked ? C.forest : C.paper, alignItems: 'center', justifyContent: 'center' }}>
         {checked && <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 17 }}>✓</Text>}
       </Pressable>
       <Pressable onPress={onToggle} accessibilityRole="button" accessibilityLabel={`${t(lang, checked ? 'unchecked' : 'checked')}: ${name}`} style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}>
-        <Text style={[{ color: checked ? C.muted : C.text, fontSize: 16, fontWeight: '700', textDecorationLine: checked ? 'line-through' : 'none' }, dirStyle(lang)]}>{name}</Text>
+        <Text style={[{ color: checked ? C.muted : C.text, fontSize: 16, fontWeight: '700', textDecorationLine: checked ? 'line-through' : 'none' }, textDirStyle(name, lang)]}>{name}</Text>
         <Text style={[{ color: C.muted, fontSize: 11, marginTop: 3 }, dirStyle(lang)]}>{t(lang, checked ? 'checked' : 'unchecked')}</Text>
       </Pressable>
       <SecondaryButton label={t(lang, 'edit')} onPress={onEdit} style={{ minWidth: 59, minHeight: 40, paddingHorizontal: 9 }} />
@@ -40,6 +41,7 @@ function ItemRow({ name, checked, lang, onToggle, onEdit, onDelete }:
 export default function ListDetail({ list, lang, onBack, onEditList, onAddItem, onToggle, onEditItem, onDeleteItem, onFinish, onShare, onDeleteList }: Props) {
   const checked = list.items.filter(item => item.checked).length;
   const total = list.items.length;
+  const displayName = getListDisplayName(list, lang);
   const askFinish = () => Alert.alert(t(lang, 'finishConfirmTitle'), t(lang, 'finishConfirmBody'), [
     { text: t(lang, 'cancel'), style: 'cancel' },
     { text: t(lang, 'finishConfirmAction'), onPress: onFinish },
@@ -56,20 +58,20 @@ export default function ListDetail({ list, lang, onBack, onEditList, onAddItem, 
   return (
     <View style={S.screen}>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 36 }} keyboardShouldPersistTaps="handled">
-        <PageHeader title={list.name} lang={lang} onBack={onBack} action={t(lang, 'editList')} onAction={onEditList} />
+        <PageHeader title={displayName} titleDir={textDirStyle(displayName, lang).writingDirection} lang={lang} onBack={onBack} action={t(lang, 'editList')} onAction={onEditList} />
         <View style={[S.card, S.shadow, { backgroundColor: C.forest, borderColor: C.forest, marginBottom: 17, padding: 19 }]}>
           <View style={{ flexDirection: rowDirection(lang), justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-            <Text style={[{ color: '#D7E8DC', fontWeight: '700', fontSize: 13 }, dirStyle(lang)]}>{t(lang, 'progress')}</Text>
+            <Text style={[{ color: C.onForestMuted, fontWeight: '700', fontSize: 13 }, dirStyle(lang)]}>{t(lang, 'progress')}</Text>
             <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 20 }}>{progressLabel(lang, checked, total)}</Text>
           </View>
-          <View style={{ height: 9, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.2)', marginTop: 12, overflow: 'hidden', flexDirection: rowDirection(lang) }}>
+          <View style={{ height: 9, borderRadius: 99, backgroundColor: C.onForestTrack, marginTop: 12, overflow: 'hidden', flexDirection: rowDirection(lang) }}>
             <View style={{ height: '100%', width: `${total > 0 ? (checked / total) * 100 : 0}%`, backgroundColor: '#FFFFFF', borderRadius: 99 }} />
           </View>
           <View style={{ marginTop: 15, flexDirection: rowDirection(lang), alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <Text style={[{ color: '#FFFFFF', fontWeight: '700', fontSize: 13, flex: 1 }, dirStyle(lang)]}>
               {`${list.schedule.enabled ? '' : `${t(lang, 'reminderDisabled')} · `}${formatListSchedule(lang, list.schedule)}`}
             </Text>
-            <Text style={{ color: '#D7E8DC', fontSize: 12, fontWeight: '800' }}>{t(lang, list.schedule.enabled ? 'reminderEnabled' : 'reminderDisabled')}</Text>
+            <Text style={{ color: C.onForestMuted, fontSize: 12, fontWeight: '800' }}>{t(lang, list.schedule.enabled ? 'reminderEnabled' : 'reminderDisabled')}</Text>
           </View>
         </View>
 

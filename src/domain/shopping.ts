@@ -1,5 +1,6 @@
 /** All calendar arithmetic uses the device's local civil date/time. */
 export type Language = 'ar' | 'en';
+export type ThemeMode = 'system' | 'light' | 'dark';
 export type RecognitionLanguage = 'ar-EG' | 'en-US';
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7; // Expo: 1=Sunday
 export type ScheduleCadence = 'weekly' | 'monthly';
@@ -25,7 +26,9 @@ export interface ListSchedule {
 
 export interface ShoppingList {
   id: string;
-  name: string; // The store/place this list belongs to.
+  name: string; // The store/place this list belongs to. Kept for backward compatibility.
+  /** Optional translated labels for built-in templates; custom names remain user-authored. */
+  localizedNames?: Partial<Record<Language, string>>;
   items: ShoppingItem[];
   schedule: ListSchedule;
   /** Last completed weekly or monthly cycle boundary, in local YYYY-MM-DD form. */
@@ -34,6 +37,8 @@ export interface ShoppingList {
 
 export interface AppPreferences {
   language: Language;
+  /** Missing on older installs; treated as system. */
+  themeMode?: ThemeMode;
 }
 
 export interface AppState {
@@ -138,11 +143,13 @@ export function createShoppingList(
   schedule: ListSchedule = DEFAULT_LIST_SCHEDULE,
   now = new Date(),
   id = `list-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
+  localizedNames?: Partial<Record<Language, string>>,
 ): ShoppingList {
   const cleanSchedule = normalizeListSchedule(schedule);
   return {
     id,
     name: name.trim(),
+    ...(localizedNames ? { localizedNames: { ...localizedNames } } : {}),
     items: items.map(item => ({ ...item })),
     schedule: cleanSchedule,
     lastHandledShoppingDate: latestClosedListCycleDate(now, cleanSchedule),

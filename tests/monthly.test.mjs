@@ -6,7 +6,8 @@ import {
   nextMonthlyReminderAt, nextReminderAt, updateListSchedule,
 } from '../src/domain/shopping.ts';
 import { parseCurrentState } from '../src/domain/stateCodec.ts';
-import { getTemplate } from '../src/domain/templates.ts';
+import { getListDisplayName, getTemplate } from '../src/domain/templates.ts';
+import { buildSharedListMessage, GOOGLE_PLAY_DOWNLOAD_URL } from '../src/domain/share.ts';
 import { formatListSchedule } from '../src/i18n/strings.ts';
 
 const at = (y, m, d, h = 12, min = 0) => new Date(y, m - 1, d, h, min);
@@ -130,4 +131,33 @@ test('monthly template has matching eight Arabic/English staples and localized l
   assert.match(formatListSchedule('ar', monthly(15)), /شهري.*١٥/);
   assert.match(formatListSchedule('en', monthly(15)), /Monthly.*15/);
   assert.match(formatListSchedule('en', { enabled: true, weekdays: [1], hour: 10, minute: 0 }), /Weekly.*Sunday/);
+});
+
+
+test('built-in list names follow the selected language while custom names stay user-authored', () => {
+  assert.equal(getListDisplayName({ name: 'مشتريات الشهر' }, 'en'), 'Monthly shopping');
+  assert.equal(getListDisplayName({ name: 'Monthly shopping' }, 'ar'), 'مشتريات الشهر');
+  assert.equal(getListDisplayName({ name: 'My local store', localizedNames: { ar: 'متجري', en: 'My local store' } }, 'ar'), 'متجري');
+  assert.equal(getListDisplayName({ name: 'كارفور' }, 'en'), 'كارفور');
+});
+
+test('v3 preferences persist manual theme mode and localized list labels', () => {
+  const list = createShoppingList('Monthly shopping', [], monthly(10), at(2026, 11, 1), 'month', { ar: 'مشتريات الشهر', en: 'Monthly shopping' });
+  const state = { schemaVersion: 3, lists: [list], preferences: { language: 'en', themeMode: 'dark' }, hasSeenIntro: true };
+  const read = parseCurrentState(JSON.parse(JSON.stringify(state)), at(2026, 11, 1));
+  assert.deepEqual(read.preferences, { language: 'en', themeMode: 'dark' });
+  assert.deepEqual(read.lists[0].localizedNames, { ar: 'مشتريات الشهر', en: 'Monthly shopping' });
+  assert.deepEqual(parseCurrentState(JSON.parse(JSON.stringify(read)), at(2026, 11, 1)), read);
+});
+
+
+test('shared lists end with a localized Fakarny footer and the Play Store link', () => {
+  const list = createShoppingList('مشتريات الشهر', items(), monthly(15), at(2026, 11, 1), 'share-month', { ar: 'مشتريات الشهر', en: 'Monthly shopping' });
+  const english = buildSharedListMessage(list, 'en');
+  const arabic = buildSharedListMessage(list, 'ar');
+  assert.equal(english.title, 'Monthly shopping');
+  assert.ok(english.message.endsWith(`List created by Fakarny\nDownload the app: ${GOOGLE_PLAY_DOWNLOAD_URL}`));
+  assert.ok(arabic.message.endsWith(`تم إنشاء القائمة باستخدام فكّرني\nحمّل التطبيق: ${GOOGLE_PLAY_DOWNLOAD_URL}`));
+  assert.match(english.message, /✓ Rice/);
+  assert.match(english.message, /• Sugar/);
 });

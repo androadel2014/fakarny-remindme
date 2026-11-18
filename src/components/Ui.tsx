@@ -18,19 +18,19 @@ export function SecondaryButton({ label, onPress, danger = false, disabled = fal
   { label: string; onPress: () => void; danger?: boolean; disabled?: boolean; style?: StyleProp<ViewStyle> }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress}
-      style={({ pressed }) => [{ minHeight: 48, paddingHorizontal: 15, borderRadius: 15, justifyContent: 'center', alignItems: 'center', backgroundColor: danger ? '#FCEAE5' : C.soft, borderWidth: 1, borderColor: danger ? '#F2C9BF' : C.border }, pressed && { opacity: .8 }, disabled && { opacity: .45 }, style]}>
+      style={({ pressed }) => [{ minHeight: 48, paddingHorizontal: 15, borderRadius: 15, justifyContent: 'center', alignItems: 'center', backgroundColor: danger ? C.dangerBg : C.soft, borderWidth: 1, borderColor: danger ? C.dangerBorder : C.border }, pressed && { opacity: .8 }, disabled && { opacity: .45 }, style]}>
       <Text style={{ color: danger ? C.coral : C.forest, fontSize: 14, fontWeight: '800' }}>{label}</Text>
     </Pressable>
   );
 }
 
-export function PageHeader({ title, lang, onBack, action, onAction }:
-  { title: string; lang: Language; onBack?: () => void; action?: string; onAction?: () => void }) {
+export function PageHeader({ title, lang, onBack, action, onAction, titleDir }:
+  { title: string; lang: Language; onBack?: () => void; action?: string; onAction?: () => void; titleDir?: 'rtl' | 'ltr' }) {
   return (
     <View style={{ flexDirection: rowDirection(lang), alignItems: 'center', justifyContent: 'space-between', minHeight: 58, marginBottom: 18, gap: 10 }}>
       <View style={{ flexDirection: rowDirection(lang), alignItems: 'center', flex: 1, gap: 10 }}>
         {onBack && <SecondaryButton label={t(lang, 'back')} onPress={onBack} style={{ minWidth: 66 }} />}
-        <Text numberOfLines={2} style={[S.heading, { flexShrink: 1 }, dirStyle(lang)]}>{title}</Text>
+        <Text numberOfLines={2} style={[S.heading, { flexShrink: 1 }, titleDir ? { writingDirection: titleDir, textAlign: titleDir === 'rtl' ? 'right' : 'left' } : dirStyle(lang)]}>{title}</Text>
       </View>
       {action && onAction && <SecondaryButton label={action} onPress={onAction} style={{ minWidth: 76 }} />}
     </View>

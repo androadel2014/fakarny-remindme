@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { isValidMonthlyDay, type Language, type ListSchedule, type ScheduleCadence, type ShoppingList, type Weekday } from '../domain/shopping';
+import { getListDisplayName } from '../domain/templates';
 import { dayLabel, formatNumber, formatTime, t } from '../i18n/strings';
-import { C, S, dirStyle, rowDirection } from '../components/theme';
+import { C, S, dirStyle, rowDirection, textDirStyle } from '../components/theme';
 import { PageHeader, PrimaryButton, SecondaryButton, SectionLabel } from '../components/Ui';
 
 interface Props {
@@ -26,7 +27,7 @@ function parseLocalizedInteger(value: string): number | null {
 }
 
 export default function ListEditor({ lang, list, onClose, onSave }: Props) {
-  const [name, setName] = useState(list?.name ?? '');
+  const [name, setName] = useState(list ? getListDisplayName(list, lang) : '');
   const [schedule, setSchedule] = useState<ListSchedule>({ ...(list?.schedule ?? DEFAULT_SCHEDULE), weekdays: [...(list?.schedule.weekdays ?? DEFAULT_SCHEDULE.weekdays)] });
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [draftHour, setDraftHour] = useState(formatNumber(list?.schedule.hour ?? DEFAULT_SCHEDULE.hour, lang));
@@ -85,8 +86,8 @@ export default function ListEditor({ lang, list, onClose, onSave }: Props) {
         <View style={[S.card, S.shadow, { marginBottom: 16 }]}>
           <SectionLabel lang={lang}>{t(lang, 'listName')}</SectionLabel>
           <TextInput value={name} onChangeText={setName} maxLength={80} placeholder={t(lang, 'listNamePlaceholder')}
-            placeholderTextColor="#9A9E94" autoCapitalize="words" returnKeyType="done" accessibilityLabel={t(lang, 'listName')}
-            style={[S.input, dirStyle(lang)]} />
+            placeholderTextColor={C.placeholder} autoCapitalize="words" returnKeyType="done" accessibilityLabel={t(lang, 'listName')}
+            style={[S.input, textDirStyle(name, lang)]} />
           <Text style={[S.muted, { marginTop: 10 }, dirStyle(lang)]}>{t(lang, 'listNameHelp')}</Text>
         </View>
 

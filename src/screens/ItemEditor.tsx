@@ -126,7 +126,7 @@ export default function ItemEditor({ lang, item, onClose, onSave }: Props) {
           <Text style={[{ color: C.forestDeep, fontSize: 21, fontWeight: '900', marginBottom: 8 }, dirStyle(lang)]}>{t(lang, 'itemHint')}</Text>
           <SectionLabel lang={lang}>{t(lang, 'itemName')}</SectionLabel>
           <TextInput value={name} onChangeText={setName} maxLength={160}
-            placeholder={t(lang, 'itemPlaceholder')} placeholderTextColor="#9A9E94"
+            placeholder={t(lang, 'itemPlaceholder')} placeholderTextColor={C.placeholder}
             autoFocus returnKeyType="done" onSubmitEditing={submit} accessibilityLabel={t(lang, 'itemName')}
             style={[S.input, { marginBottom: 18 }, dirStyle(lang)]} />
           <View style={{ flexDirection: rowDirection(lang), alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 11 }}>
@@ -142,7 +142,7 @@ export default function ItemEditor({ lang, item, onClose, onSave }: Props) {
             </View>
           </View>
           <Pressable onPress={() => void toggleSpeech()} accessibilityRole="button" accessibilityLabel={t(lang, listening ? 'voiceStop' : 'voice')}
-            style={{ borderRadius: 17, backgroundColor: listening ? '#FCE9E2' : C.mint, minHeight: 59, flexDirection: rowDirection(lang), alignItems: 'center', justifyContent: 'center', gap: 11, padding: 10 }}>
+            style={{ borderRadius: 17, backgroundColor: listening ? C.dangerBg : C.mint, minHeight: 59, flexDirection: rowDirection(lang), alignItems: 'center', justifyContent: 'center', gap: 11, padding: 10 }}>
             <Text style={{ fontSize: 21 }}>{listening ? '⏹' : '🎙️'}</Text>
             <Text style={{ color: listening ? C.coral : C.forest, fontSize: 15, fontWeight: '900' }}>{t(lang, listening ? 'voiceStop' : 'voice')} · {voiceLocaleText}</Text>
           </Pressable>

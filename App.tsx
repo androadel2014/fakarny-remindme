@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Modal, Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, BackHandler, Modal, Platform, Pressable, ScrollView, Share, Text, View, useColorScheme } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -14,14 +14,16 @@ import {
   type Language,
   type ListSchedule,
 } from './src/domain/shopping';
-import { getTemplate, type TemplateKind } from './src/domain/templates';
+import { getListDisplayName, getTemplate, type TemplateKind } from './src/domain/templates';
+import { resolveHardwareBack, type AppScreen } from './src/domain/navigation';
+import { buildSharedListMessage } from './src/domain/share';
 import { loadState, saveState } from './src/services/storage';
 import {
   askExactAlarmPermission, askNotificationPermission, getReminderPermissions,
   isOurReminder, snapshotFromReminder, synchronizeReminders, type AlarmSnapshot,
 } from './src/services/reminders';
 import { initializeAds, showInterstitialAfterFinish } from './src/services/ads';
-import { C, S, dirStyle, rowDirection } from './src/components/theme';
+import { C, S, dirStyle, rowDirection, setActiveTheme } from './src/components/theme';
 import { PrimaryButton, SecondaryButton } from './src/components/Ui';
 import { formatNumber, t } from './src/i18n/strings';
 import Home from './src/screens/Home';
@@ -31,11 +33,11 @@ import ItemEditor from './src/screens/ItemEditor';
 import Settings from './src/screens/Settings';
 import Intro from './src/screens/Intro';
 
-type Screen = 'home' | 'list' | 'listEditor' | 'itemEditor' | 'settings';
+type Screen = AppScreen;
 type PermissionState = { notifications: boolean };
 
 function MainApp() {
-  const [data, setData] = useState<ShoppingAppState>(() => ({ schemaVersion: 3, lists: [], preferences: { language: 'ar' }, hasSeenIntro: false }));
+  const [data, setData] = useState<ShoppingAppState>(() => ({ schemaVersion: 3, lists: [], preferences: { language: 'ar', themeMode: 'system' }, hasSeenIntro: false }));
   const dataRef = useRef<ShoppingAppState>(data);
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -48,6 +50,10 @@ function MainApp() {
   const [alarmSnapshot, setAlarmSnapshot] = useState<AlarmSnapshot | null>(null);
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const language = data.preferences.language;
+  const themeMode = data.preferences.themeMode ?? 'system';
+  const systemColorScheme = useColorScheme();
+  const resolvedTheme = themeMode === 'system' ? (systemColorScheme === 'dark' ? 'dark' : 'light') : themeMode;
+  setActiveTheme(resolvedTheme);
   const selectedList = data.lists.find(list => list.id === selectedListId);
 
   const commit = useCallback((next: ShoppingAppState) => {
@@ -74,6 +80,28 @@ function MainApp() {
   }, []);
 
   useEffect(() => { void hydrate(); }, [hydrate]);
+
+  // Android's hardware Back button follows the same in-app navigation as the
+  // visible Back controls instead of closing the app from nested screens.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (alarmSnapshot) {
+        setAlarmSnapshot(null);
+        return true;
+      }
+      if (!ready || !data.hasSeenIntro) return false;
+      const hasSelectedList = !!selectedListId && dataRef.current.lists.some(list => list.id === selectedListId);
+      const destination = resolveHardwareBack(screen, hasSelectedList);
+      if (destination === 'exit') return false;
+      if (screen === 'itemEditor') setEditingItemId(null);
+      if (screen === 'listEditor') setEditingListId(null);
+      if (destination === 'home') setSelectedListId(null);
+      setScreen(destination);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [alarmSnapshot, ready, data.hasSeenIntro, screen, selectedListId]);
 
   useEffect(() => {
     if (!ready) return;
@@ -180,13 +208,13 @@ function MainApp() {
     const current = dataRef.current;
     if (editingListId) {
       const updated = current.lists.map(list => list.id === editingListId
-        ? updateListSchedule({ ...list, name }, schedule, new Date())
+        ? updateListSchedule({ ...list, name, localizedNames: { ...list.localizedNames, [language]: name } }, schedule, new Date())
         : list);
       commit({ ...current, lists: updated });
       setSelectedListId(editingListId);
       setScreen('list');
     } else {
-      const created = createShoppingList(name, [], schedule, new Date());
+      const created = createShoppingList(name, [], schedule, new Date(), undefined, { [language]: name });
       commit({ ...current, lists: [...current.lists, created] });
       setSelectedListId(created.id);
       setScreen('list');
@@ -199,7 +227,7 @@ function MainApp() {
     const templateSchedule: ListSchedule = kind === 'monthly'
       ? { ...DEFAULT_LIST_SCHEDULE, cadence: 'monthly', weekdays: [], dayOfMonth: 1 }
       : DEFAULT_LIST_SCHEDULE;
-    const created = createShoppingList(template.name, template.items, templateSchedule, new Date());
+    const created = createShoppingList(template.name, template.items, templateSchedule, new Date(), undefined, template.localizedNames);
     commit({ ...dataRef.current, lists: [...dataRef.current.lists, created] });
     setSelectedListId(created.id);
     setScreen('list');
@@ -264,23 +292,22 @@ function MainApp() {
 
   async function shareList() {
     if (!selectedList) return;
-    const lines = selectedList.items.map(item => `${item.checked ? '✓' : '•'} ${item.name}`);
-    const message = [t(language, 'shareTitle'), selectedList.name, ...(lines.length > 0 ? lines : [t(language, 'shareEmpty')])].join('\n');
-    try { await Share.share({ message, title: selectedList.name }); }
+    const shared = buildSharedListMessage(selectedList, language);
+    try { await Share.share(shared); }
     catch { Alert.alert(t(language, 'shareError')); }
   }
 
-  function saveLanguage(nextLanguage: Language) {
-    commit({ ...dataRef.current, preferences: { language: nextLanguage } });
+  function savePreferences(nextLanguage: Language, nextThemeMode: 'system' | 'light' | 'dark') {
+    commit({ ...dataRef.current, preferences: { ...dataRef.current.preferences, language: nextLanguage, themeMode: nextThemeMode } });
     setScreen('home');
   }
 
   const alarmList = data.lists.find(list => list.id === alarmSnapshot?.listId);
-  const alarmTitle = alarmSnapshot?.listName || alarmList?.name || t(language, 'appName');
+  const alarmTitle = alarmList ? getListDisplayName(alarmList, language) : (alarmSnapshot?.listName || t(language, 'appName'));
 
   return (
     <SafeAreaView style={S.screen} edges={['top', 'left', 'right', 'bottom']}>
-      <StatusBar style="dark" />
+      <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />
       {!ready ? (
         <View style={{ flex: 1, padding: 25, justifyContent: 'center', alignItems: 'center', gap: 18 }}>
           {loadError ? (
@@ -322,8 +349,8 @@ function MainApp() {
             onClose={() => { setEditingItemId(null); setScreen('list'); }}
             onSave={saveItem} />}
 
-          {screen === 'settings' && <Settings language={language} notificationAllowed={permissions.notifications}
-            onClose={() => setScreen('home')} onSave={saveLanguage}
+          {screen === 'settings' && <Settings language={language} themeMode={themeMode} notificationAllowed={permissions.notifications}
+            onClose={() => setScreen('home')} onSave={savePreferences}
             onNotificationPermission={() => void requestNotifications()} onExactPermission={() => void requestExact()} />}
         </>
       )}

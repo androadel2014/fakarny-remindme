@@ -3,6 +3,7 @@ import * as IntentLauncher from 'expo-intent-launcher';
 import * as Notifications from 'expo-notifications';
 import { buildReminderSchedulePlan, type AppState, type Language, type ShoppingList, type Weekday } from '../domain/shopping';
 import { formatNumber, t } from '../i18n/strings';
+import { getListDisplayName } from '../domain/templates';
 
 export const REMINDER_CHANNEL = 'fakarny-store-reminders-v2';
 function reminderChannelId(language: Language): string { return `${REMINDER_CHANNEL}-${language}`; }
@@ -27,15 +28,16 @@ export interface AlarmSnapshot {
 
 export function buildNotificationContent(list: ShoppingList, language: Language): Notifications.NotificationContentInput {
   const outstanding = list.items.filter(item => !item.checked).map(item => item.name);
+  const listName = getListDisplayName(list, language);
   const body = outstanding.length > 0
     ? `${t(language, 'alarmBody')}\n${outstanding.map((name, index) => `${formatNumber(index + 1, language)}. ${name}`).join('\n')}`
     : t(language, 'alarmEmpty');
   return {
-    title: `${t(language, 'alarmTitlePrefix')} ${list.name}`,
+    title: `${t(language, 'alarmTitlePrefix')} ${listName}`,
     body,
     sound: 'reminder.wav',
     priority: Notifications.AndroidNotificationPriority.MAX,
-    data: { owner: REMINDER_OWNER, listId: list.id, listName: list.name, items: outstanding },
+    data: { owner: REMINDER_OWNER, listId: list.id, listName, items: outstanding },
     ...(Platform.OS === 'android' ? { color: '#245D48' } : {}),
   };
 }

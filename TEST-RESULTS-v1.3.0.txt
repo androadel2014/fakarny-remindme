@@ -1,0 +1,32 @@
+Fakarny v1.3.0 verification summary
+===================================
+
+Unit tests
+----------
+Command: npm test
+Result: 34 passed, 0 failed
+
+Coverage includes:
+- Existing weekly carry-over, schedule, and migration behavior
+- Existing monthly day 1-28 recurrence and independent notification planning
+- Monthly cycle boundaries, February, leap years, December/January rollover
+- Monthly manual finish and automatic rollover, including muted reminders
+- v2 -> v3 and v3 saved-state round trips
+- Arabic/English translation-key parity
+- Built-in template-name localization and custom-name preservation
+- Theme preference and localized-name persistence
+- Shared-list footer attribution, download link, and item-state formatting
+- Android hardware Back navigation destinations
+
+Typecheck / native build
+------------------------
+Strict TypeScript checks passed for the pure domain, migration, navigation, sharing, localization, and theme modules. Full app typecheck and native build were not completed. The project dependencies are not installed in this working environment. The npm registry
+could not be reached (`EAI_AGAIN`), so Expo/React Native packages and TypeScript declarations
+could not be restored. `npm run typecheck` therefore reports missing dependencies and
+missing `expo/tsconfig.base`; this is an environment limitation, not a successful full-app
+typecheck. No Android Gradle build, APK, AAB, or physical-device test is claimed.
+
+Optional camera / ML Kit features
+---------------------------------
+Not added because the required native dependencies could not be fetched or compatibility-
+checked against Expo SDK ~58.0.25 / React Native 0.88.0.

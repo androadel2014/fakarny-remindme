@@ -1,9 +1,9 @@
 import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import type { AppState, ShoppingList } from '../domain/shopping';
-import type { TemplateKind } from '../domain/templates';
+import { getListDisplayName, type TemplateKind } from '../domain/templates';
 import { formatListSchedule, formatNumber, progressLabel, t } from '../i18n/strings';
-import { C, S, dirStyle, rowDirection } from '../components/theme';
+import { C, S, dirStyle, rowDirection, textDirStyle } from '../components/theme';
 import { PageHeader, PrimaryButton, ProgressBar, SecondaryButton, SectionLabel } from '../components/Ui';
 import AdBanner from '../components/AdBanner';
 
@@ -21,11 +21,12 @@ function ListCard({ list, lang, onOpen, onEdit }: {
 }) {
   const checked = list.items.filter(item => item.checked).length;
   const total = list.items.length;
+  const displayName = getListDisplayName(list, lang);
   return (
     <View style={[S.card, S.shadow, { marginBottom: 13, padding: 17 }]}>
       <View style={{ flexDirection: rowDirection(lang), alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
         <View style={{ flex: 1 }}>
-          <Text numberOfLines={2} style={[{ color: C.forestDeep, fontSize: 20, fontWeight: '900' }, dirStyle(lang)]}>{list.name}</Text>
+          <Text numberOfLines={2} style={[{ color: C.forestDeep, fontSize: 20, fontWeight: '900' }, textDirStyle(displayName, lang)]}>{displayName}</Text>
           <Text style={[{ color: C.muted, fontSize: 13, marginTop: 6, lineHeight: 19 }, dirStyle(lang)]}>
             {`${list.schedule.enabled ? '' : `${t(lang, 'reminderDisabled')} · `}${formatListSchedule(lang, list.schedule)}`}
           </Text>

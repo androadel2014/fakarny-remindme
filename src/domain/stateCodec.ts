@@ -1,5 +1,5 @@
 /** Pure saved-state decoder (v2 -> v3 and v3); no device dependencies. */
-import { isValidMonthlyDay, latestClosedListCycleDate, type AppState, type Language, type ListSchedule, type ShoppingItem, type ShoppingList, type Weekday } from './shopping.ts';
+import { isValidMonthlyDay, latestClosedListCycleDate, type AppState, type Language, type ListSchedule, type ShoppingItem, type ShoppingList, type ThemeMode, type Weekday } from './shopping.ts';
 
 type RecordValue = Record<string, unknown>;
 function isRecord(value: unknown): value is RecordValue { return !!value && typeof value === 'object' && !Array.isArray(value); }
@@ -45,7 +45,12 @@ function parseSchedule(value: unknown, forceWeekly = false): ListSchedule {
 function parseList(value: unknown, now: Date, forceWeekly: boolean): ShoppingList | null {
   if (!isRecord(value) || typeof value.id !== 'string' || typeof value.name !== 'string' || !value.name.trim()) return null;
   const schedule = parseSchedule(value.schedule, forceWeekly);
-  return { id: value.id, name: value.name.trim().slice(0, 80), items: parseItems(value.items), schedule,
+  const localizedNames = isRecord(value.localizedNames) ? {
+    ...(typeof value.localizedNames.ar === 'string' && value.localizedNames.ar.trim() ? { ar: value.localizedNames.ar.trim().slice(0, 80) } : {}),
+    ...(typeof value.localizedNames.en === 'string' && value.localizedNames.en.trim() ? { en: value.localizedNames.en.trim().slice(0, 80) } : {}),
+  } : undefined;
+  return { id: value.id, name: value.name.trim().slice(0, 80), ...(localizedNames && Object.keys(localizedNames).length ? { localizedNames } : {}),
+    items: parseItems(value.items), schedule,
     lastHandledShoppingDate: isDateKey(value.lastHandledShoppingDate) ? value.lastHandledShoppingDate : latestClosedListCycleDate(now, schedule) };
 }
 
@@ -60,6 +65,8 @@ export function parseCurrentState(value: unknown, now = new Date()): AppState {
   });
   const preferences = isRecord(value.preferences) ? value.preferences : {};
   const language: Language = preferences.language === 'en' ? 'en' : 'ar';
-  return { schemaVersion: 3, lists, preferences: { language }, hasSeenIntro: value.hasSeenIntro === true };
+  const themeMode: ThemeMode | undefined = preferences.themeMode === 'light' || preferences.themeMode === 'dark' || preferences.themeMode === 'system'
+    ? preferences.themeMode : undefined;
+  return { schemaVersion: 3, lists, preferences: { language, ...(themeMode ? { themeMode } : {}) }, hasSeenIntro: value.hasSeenIntro === true };
 }
 

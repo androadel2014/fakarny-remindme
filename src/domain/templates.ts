@@ -17,11 +17,12 @@ const TEMPLATE_CONTENT: Record<Language, Record<TemplateKind, { name: string; it
   },
 };
 
-export function getTemplate(kind: TemplateKind, lang: Language): { name: string; items: ShoppingItem[] } {
+export function getTemplate(kind: TemplateKind, lang: Language): { name: string; localizedNames: Record<Language, string>; items: ShoppingItem[] } {
   const template = TEMPLATE_CONTENT[lang][kind];
   const now = new Date().toISOString();
   return {
     name: template.name,
+    localizedNames: { ar: TEMPLATE_CONTENT.ar[kind].name, en: TEMPLATE_CONTENT.en[kind].name },
     items: template.items.map((name, index) => ({
       id: `template-${kind}-${index + 1}-${Date.now().toString(36)}`,
       name,
@@ -30,4 +31,17 @@ export function getTemplate(kind: TemplateKind, lang: Language): { name: string;
       updatedAt: now,
     })),
   };
+}
+
+/** Resolve built-in template names in the active UI language, including pre-v1.3 saved lists. */
+export function getListDisplayName(list: { name: string; localizedNames?: Partial<Record<Language, string>> }, lang: Language): string {
+  const savedTranslation = list.localizedNames?.[lang]?.trim();
+  if (savedTranslation) return savedTranslation;
+  for (const kind of ['weekly', 'monthly', 'travel', 'household'] as TemplateKind[]) {
+    const ar = TEMPLATE_CONTENT.ar[kind].name;
+    const en = TEMPLATE_CONTENT.en[kind].name;
+    if (list.name === ar || list.name === en) return lang === 'ar' ? ar : en;
+  }
+  if (list.name === 'متجر البيت' || list.name === 'Home store') return lang === 'ar' ? 'متجر البيت' : 'Home store';
+  return list.name;
 }
